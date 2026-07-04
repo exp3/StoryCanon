@@ -24,14 +24,14 @@ export class DatabaseStack extends cdk.Stack {
       securityGroupName: `${props.prefix}-db-sg`,
       allowAllOutbound: false,
     });
-    dbSecurityGroup.addIngressRule(props.appSecurityGroup, ec2.Port.tcp(5432), "App Runner to PostgreSQL");
+    dbSecurityGroup.addIngressRule(props.appSecurityGroup, ec2.Port.tcp(5432), "Application runtime to PostgreSQL");
 
     this.instance = new rds.DatabaseInstance(this, "Postgres", {
       instanceIdentifier: `${props.prefix}-db`,
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [dbSecurityGroup],
-      engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16_3 }),
+      engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16 }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
       allocatedStorage: 20,
       storageType: rds.StorageType.GP3,

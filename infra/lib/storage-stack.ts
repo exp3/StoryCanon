@@ -22,5 +22,7 @@ export class StorageStack extends cdk.Stack {
       removalPolicy: props.isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: !props.isProd,
     });
+
+    new cdk.CfnOutput(this, "ExportBucketName", { value: this.exportBucket.bucketName });
   }
 }

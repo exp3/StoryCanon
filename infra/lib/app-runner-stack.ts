@@ -15,20 +15,23 @@ export interface AppRunnerStackProps extends cdk.StackProps {
   database: DatabaseStack;
   storage: StorageStack;
   secrets: SecretsStack;
+  useExistingEcrRepository?: boolean;
 }
 
 export class AppRunnerStack extends cdk.Stack {
-  readonly repository: ecr.Repository;
+  readonly repository: ecr.IRepository;
   readonly serviceArn: string;
 
   constructor(scope: Construct, id: string, props: AppRunnerStackProps) {
     super(scope, id, props);
 
-    this.repository = new ecr.Repository(this, "WebRepository", {
-      repositoryName: `${props.prefix}-web`,
-      imageScanOnPush: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    this.repository = props.useExistingEcrRepository
+      ? ecr.Repository.fromRepositoryName(this, "WebRepository", `${props.prefix}-web`)
+      : new ecr.Repository(this, "WebRepository", {
+          repositoryName: `${props.prefix}-web`,
+          imageScanOnPush: true,
+          removalPolicy: cdk.RemovalPolicy.RETAIN,
+        });
 
     const accessRole = new iam.Role(this, "AppRunnerAccessRole", {
       assumedBy: new iam.ServicePrincipal("build.apprunner.amazonaws.com"),
@@ -62,12 +65,14 @@ export class AppRunnerStack extends cdk.Stack {
             runtimeEnvironmentVariables: [
               { name: "NODE_ENV", value: "production" },
               { name: "APP_ENV", value: props.prefix },
+              { name: "PAYMENT_MODE", value: "mock" },
               { name: "DATABASE_HOST", value: props.database.endpointAddress },
               { name: "DATABASE_PORT", value: props.database.endpointPort },
               { name: "EXPORT_BUCKET_NAME", value: props.storage.exportBucket.bucketName },
             ],
             runtimeEnvironmentSecrets: [
               { name: "DATABASE_URL", value: props.secrets.appSecrets.DATABASE_URL.secretArn },
+              { name: "NEXTAUTH_URL", value: props.secrets.appSecrets.NEXTAUTH_URL.secretArn },
               { name: "NEXTAUTH_SECRET", value: props.secrets.appSecrets.NEXTAUTH_SECRET.secretArn },
               { name: "GOOGLE_CLIENT_ID", value: props.secrets.appSecrets.GOOGLE_CLIENT_ID.secretArn },
               { name: "GOOGLE_CLIENT_SECRET", value: props.secrets.appSecrets.GOOGLE_CLIENT_SECRET.secretArn },

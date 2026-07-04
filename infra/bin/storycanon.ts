@@ -13,6 +13,7 @@ const region = app.node.tryGetContext("region") ?? process.env.AWS_REGION ?? "ap
 const env = { account: process.env.CDK_DEFAULT_ACCOUNT, region };
 const prefix = `storycanon-${stage}`;
 const isProd = stage === "prod";
+const useExistingEcrRepository = app.node.tryGetContext("useExistingEcrRepository") === "true";
 
 const network = new NetworkStack(app, `${prefix}-network`, { env, prefix });
 const storage = new StorageStack(app, `${prefix}-storage`, { env, prefix, isProd });
@@ -32,6 +33,7 @@ const appRunner = new AppRunnerStack(app, `${prefix}-app`, {
   database,
   storage,
   secrets,
+  useExistingEcrRepository,
 });
 
 const hostedZoneName = app.node.tryGetContext("hostedZoneName") ?? process.env.HOSTED_ZONE_NAME;

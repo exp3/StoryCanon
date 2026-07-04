@@ -28,5 +28,14 @@ export class NetworkStack extends cdk.Stack {
       securityGroupName: `${props.prefix}-app-sg`,
       allowAllOutbound: true,
     });
+
+    new cdk.CfnOutput(this, "VpcId", { value: this.vpc.vpcId });
+    new cdk.CfnOutput(this, "AppSecurityGroupId", { value: this.appSecurityGroup.securityGroupId });
+    new cdk.CfnOutput(this, "PrivateSubnetIds", {
+      value: this.vpc.privateSubnets.map((subnet) => subnet.subnetId).join(","),
+    });
+    new cdk.CfnOutput(this, "PublicSubnetIds", {
+      value: this.vpc.publicSubnets.map((subnet) => subnet.subnetId).join(","),
+    });
   }
 }

@@ -14,6 +14,7 @@ export class SecretsStack extends cdk.Stack {
 
     const names = [
       "DATABASE_URL",
+      "NEXTAUTH_URL",
       "NEXTAUTH_SECRET",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
