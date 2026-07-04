@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: storycanon
+      POSTGRES_PASSWORD: storycanon
+      POSTGRES_DB: storycanon
+    ports:
+      - "5432:5432"
+    volumes:
+      - storycanon_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storycanon -d storycanon"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  storycanon_postgres:

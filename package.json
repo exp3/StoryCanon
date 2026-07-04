@@ -1,0 +1,16 @@
+{
+  "name": "storycanon",
+  "private": true,
+  "scripts": {
+    "build": "npm run build -w apps/web && npm run build -w infra",
+    "test": "node --test tests/integration/*.test.mjs",
+    "test:integration": "node --test tests/integration/*.test.mjs"
+  },
+  "workspaces": [
+    "apps/web",
+    "infra"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

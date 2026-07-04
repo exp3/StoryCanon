@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PLUS
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+enum Visibility {
+  PRIVATE
+}
+
+enum CreatedBy {
+  USER
+  CHATGPT
+}
+
+enum Importance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum CharacterNoteCategory {
+  INNER
+  RELATIONSHIP
+  BACKGROUND
+  SPEECH
+  PLOT
+  OTHER
+}
+
+enum WorldNoteCategory {
+  PLACE
+  ORGANIZATION
+  TECHNOLOGY
+  HISTORY
+  CULTURE
+  ITEM
+  RULE
+  OTHER
+}
+
+enum PlotThreadStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  RESOLVED
+  DROPPED
+}
+
+enum ForeshadowingStatus {
+  UNPLANTED
+  PLANTED
+  IN_PROGRESS
+  RESOLVED
+  DROPPED
+}
+
+enum RevisionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RevisionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  ON_HOLD
+  DROPPED
+}
+
+enum RevisionSource {
+  USER
+  CHATGPT
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  subscriptions Subscription[]
+  apiTokens     ApiToken[]
+  projects      Project[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  plan                 Plan               @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiToken {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  tokenHash   String
+  tokenPrefix String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenPrefix])
+}
+
+model Project {
+  id                 String               @id @default(cuid())
+  userId             String
+  title              String
+  genre              String?
+  premise            String?
+  tone               String?
+  targetAudience     String?
+  writingStyle       String?
+  forbiddenElements  String?
+  userPreferences    String?
+  visibility         Visibility           @default(PRIVATE)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapters           Chapter[]
+  scenes             Scene[]
+  characters         Character[]
+  characterNotes     CharacterNote[]
+  worldNotes         WorldNote[]
+  plotThreads        PlotThread[]
+  foreshadowings     Foreshadowing[]
+  revisionTodos      RevisionTodo[]
+  storyStateSnapshots StoryStateSnapshot[]
+  exportJobs         ExportJob[]
+
+  @@index([userId, updatedAt])
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  order     Int
+  summary   String?
+  purpose   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes    Scene[]
+
+  @@unique([projectId, order])
+}
+
+model Scene {
+  id               String    @id @default(cuid())
+  projectId        String
+  chapterId        String?
+  title            String
+  order            Int
+  body             String
+  summary          String?
+  occurredEvents   String?
+  generationPrompt String?
+  createdBy        CreatedBy @default(USER)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chapter          Chapter?  @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, order])
+}
+
+model Character {
+  id            String          @id @default(cuid())
+  projectId     String
+  name          String
+  role          String?
+  age           String?
+  personality   String?
+  speechStyle   String?
+  appearance    String?
+  background    String?
+  goal          String?
+  secret        String?
+  currentState  String?
+  firstSceneId  String?
+  lastSceneId   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notes         CharacterNote[]
+
+  @@unique([projectId, name])
+}
+
+model CharacterNote {
+  id             String                 @id @default(cuid())
+  projectId      String
+  characterId    String
+  title          String?
+  body           String
+  category       CharacterNoteCategory?
+  importance     Importance             @default(MEDIUM)
+  relatedSceneId String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  project        Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character      Character              @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model WorldNote {
+  id             String            @id @default(cuid())
+  projectId      String
+  title          String
+  body           String
+  category       WorldNoteCategory @default(OTHER)
+  importance     Importance        @default(MEDIUM)
+  relatedSceneId String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model PlotThread {
+  id                  String           @id @default(cuid())
+  projectId           String
+  title               String
+  description         String?
+  status              PlotThreadStatus @default(NOT_STARTED)
+  startSceneId        String?
+  currentState        String?
+  resolutionCondition String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  project             Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Foreshadowing {
+  id                String              @id @default(cuid())
+  projectId         String
+  title             String
+  description       String
+  plantedSceneId    String?
+  plannedResolution String?
+  resolvedSceneId   String?
+  status            ForeshadowingStatus @default(UNPLANTED)
+  importance        Importance          @default(MEDIUM)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  project           Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model RevisionTodo {
+  id         String           @id @default(cuid())
+  projectId  String
+  chapterId  String?
+  sceneId    String?
+  title      String
+  problem    String
+  suggestion String?
+  priority   RevisionPriority @default(MEDIUM)
+  status     RevisionStatus   @default(OPEN)
+  source     RevisionSource   @default(USER)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model StoryStateSnapshot {
+  id                       String   @id @default(cuid())
+  projectId                String
+  summary                  String
+  recentEvents             String?
+  characterStates          String?
+  unresolvedProblems       String?
+  unresolvedForeshadowings String?
+  activePlotThreads        String?
+  nextOptions              String?
+  avoidElements            String?
+  writingRules             String?
+  userPreferences          String?
+  createdAt                DateTime @default(now())
+  project                  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
+
+model ExportJob {
+  id        String   @id @default(cuid())
+  projectId String
+  kind      String
+  status    String
+  s3Key     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

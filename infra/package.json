@@ -1,0 +1,21 @@
+{
+  "name": "@storycanon/infra",
+  "private": true,
+  "bin": {
+    "storycanon": "bin/storycanon.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "synth": "cdk synth"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.174.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "aws-cdk": "^2.174.0",
+    "typescript": "^5.7.2"
+  }
+}
