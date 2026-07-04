@@ -8,7 +8,7 @@ export async function authenticateBearer(header: string | null): Promise<Current
 
   const prefix = value.slice(0, 12);
   const candidates = await prisma.apiToken.findMany({
-    where: { tokenPrefix: prefix, revokedAt: null },
+    where: { tokenPrefix: prefix, revokedAt: null, deletedAt: null },
     select: { id: true, userId: true, tokenHash: true },
   });
 
@@ -16,7 +16,7 @@ export async function authenticateBearer(header: string | null): Promise<Current
     const ok = await bcrypt.compare(`${value}:${process.env.APP_API_TOKEN_PEPPER ?? ""}`, candidate.tokenHash);
     if (ok) {
       await prisma.apiToken.update({ where: { id: candidate.id }, data: { lastUsedAt: new Date() } });
-      return { userId: candidate.userId, via: "api-token" };
+      return { userId: candidate.userId, via: "api-token", apiTokenId: candidate.id };
     }
   }
 

@@ -1,5 +1,4 @@
 import * as cdk from "aws-cdk-lib";
-import * as apprunner from "aws-cdk-lib/aws-apprunner";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";
 
@@ -16,10 +15,13 @@ export class DnsStack extends cdk.Stack {
 
     route53.HostedZone.fromLookup(this, "HostedZone", { domainName: props.hostedZoneName });
 
-    new apprunner.CfnCustomDomainAssociation(this, "AppDomain", {
-      domainName: props.appDomainName,
-      serviceArn: props.serviceArn,
-      enableWwwSubdomain: false,
+    new cdk.CfnOutput(this, "AppRunnerCustomDomainCommand", {
+      value: [
+        "aws apprunner associate-custom-domain",
+        `--service-arn ${props.serviceArn}`,
+        `--domain-name ${props.appDomainName}`,
+        "--no-enable-www-subdomain",
+      ].join(" "),
     });
   }
 }

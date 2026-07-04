@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export type CurrentActor = {
   userId: string;
   via: "web" | "api-token";
+  apiTokenId?: string;
 };
 
 export function json(data: unknown, init?: ResponseInit) {

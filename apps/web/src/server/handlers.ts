@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { PlanLimitError, assertCanAddScene, assertCanCreateProject, assertCountLimit } from "./plan";
+import { PlanLimitError, assertCanAddScene, assertCanCreateProject, assertCountLimit, getPlan } from "./plan";
 import { renderMarkdown } from "./export";
 import {
   createChapterSchema,
@@ -16,15 +17,168 @@ import {
 import { errorResponse, json, type CurrentActor } from "./http";
 
 type Body = Record<string, unknown>;
+type Snapshot = Record<string, unknown>;
+type TargetType =
+  | "PROJECT"
+  | "CHAPTER"
+  | "SCENE"
+  | "CHARACTER"
+  | "CHARACTER_NOTE"
+  | "WORLD_NOTE"
+  | "FORESHADOWING"
+  | "PLOT_THREAD"
+  | "REVISION_TODO"
+  | "STORY_STATE_SNAPSHOT";
+
+type TargetConfig = {
+  targetType: TargetType;
+  delegate: any;
+  responseKey: string;
+  updateSchema: { partial: () => { parse: (body: Body) => Body } };
+  projectIdOf?: (record: Snapshot) => string;
+};
+
+const mutationTargets: Record<TargetType, TargetConfig> = {
+  PROJECT: { targetType: "PROJECT", delegate: prisma.project, responseKey: "project", updateSchema: createProjectSchema },
+  CHAPTER: { targetType: "CHAPTER", delegate: prisma.chapter, responseKey: "chapter", updateSchema: createChapterSchema, projectIdOf: (r) => String(r.projectId) },
+  SCENE: { targetType: "SCENE", delegate: prisma.scene, responseKey: "scene", updateSchema: createSceneSchema, projectIdOf: (r) => String(r.projectId) },
+  CHARACTER: { targetType: "CHARACTER", delegate: prisma.character, responseKey: "character", updateSchema: createCharacterSchema, projectIdOf: (r) => String(r.projectId) },
+  CHARACTER_NOTE: {
+    targetType: "CHARACTER_NOTE",
+    delegate: prisma.characterNote,
+    responseKey: "characterNote",
+    updateSchema: createCharacterNoteSchema.omit({ characterId: true, characterName: true }),
+    projectIdOf: (r) => String(r.projectId),
+  },
+  WORLD_NOTE: { targetType: "WORLD_NOTE", delegate: prisma.worldNote, responseKey: "worldNote", updateSchema: createWorldNoteSchema, projectIdOf: (r) => String(r.projectId) },
+  FORESHADOWING: { targetType: "FORESHADOWING", delegate: prisma.foreshadowing, responseKey: "foreshadowing", updateSchema: createForeshadowingSchema, projectIdOf: (r) => String(r.projectId) },
+  PLOT_THREAD: { targetType: "PLOT_THREAD", delegate: prisma.plotThread, responseKey: "plotThread", updateSchema: createPlotThreadSchema, projectIdOf: (r) => String(r.projectId) },
+  REVISION_TODO: { targetType: "REVISION_TODO", delegate: prisma.revisionTodo, responseKey: "revisionTodo", updateSchema: createRevisionTodoSchema, projectIdOf: (r) => String(r.projectId) },
+  STORY_STATE_SNAPSHOT: {
+    targetType: "STORY_STATE_SNAPSHOT",
+    delegate: prisma.storyStateSnapshot,
+    responseKey: "storyStateSnapshot",
+    updateSchema: createStoryStateSnapshotSchema,
+    projectIdOf: (r) => String(r.projectId),
+  },
+};
+
+function commandId() {
+  return `mcp_cmd_${randomUUID()}`;
+}
+
+function transactionId() {
+  return `mcp_tx_${randomUUID()}`;
+}
+
+function snapshot(record: unknown): Snapshot | null {
+  if (!record) return null;
+  return JSON.parse(JSON.stringify(record)) as Snapshot;
+}
+
+function restoreData(record: Snapshot) {
+  const data = { ...record };
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
+  return data;
+}
 
 async function ownedProject(projectId: string, userId: string) {
-  return prisma.project.findFirst({ where: { id: projectId, userId } });
+  return prisma.project.findFirst({ where: { id: projectId, userId, deletedAt: null } });
 }
 
 async function requireOwnedProject(projectId: string, actor: CurrentActor) {
   const project = await ownedProject(projectId, actor.userId);
   if (!project) throw new Response("Not found", { status: 404 });
   return project;
+}
+
+async function requireOwnedProjectForRollback(projectId: string, actor: CurrentActor) {
+  const project = await prisma.project.findFirst({ where: { id: projectId, userId: actor.userId } });
+  if (!project) throw new Response("Not found", { status: 404 });
+  return project;
+}
+
+async function requireOwnedTarget(config: TargetConfig, id: string, actor: CurrentActor, includeDeleted = false) {
+  const record = await config.delegate.findFirst({ where: { id, ...(includeDeleted ? {} : { deletedAt: null }) } });
+  if (!record) throw new Response("Not found", { status: 404 });
+  const projectId = config.targetType === "PROJECT" ? String(record.id) : config.projectIdOf?.(record);
+  if (!projectId) throw new Response("Not found", { status: 404 });
+  await requireOwnedProject(projectId, actor);
+  return { record, projectId };
+}
+
+async function recordMutation(input: {
+  actor: CurrentActor;
+  projectId: string;
+  action: "CREATE" | "UPDATE" | "DELETE" | "ROLLBACK";
+  targetType: TargetType;
+  targetId: string;
+  beforeSnapshot: Snapshot | null;
+  afterSnapshot: Snapshot | null;
+  commandId?: string;
+  transactionId?: string;
+}) {
+  return prisma.mutationLog.create({
+    data: {
+      commandId: input.commandId ?? commandId(),
+      transactionId: input.transactionId,
+      userId: input.actor.userId,
+      apiTokenId: input.actor.apiTokenId,
+      projectId: input.projectId,
+      action: input.action,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      beforeSnapshot: (input.beforeSnapshot ?? undefined) as any,
+      afterSnapshot: (input.afterSnapshot ?? undefined) as any,
+    },
+  });
+}
+
+async function createWithLog(config: TargetConfig, actor: CurrentActor, projectId: string, data: Body, txId?: string) {
+  const record = await config.delegate.create({ data });
+  const log = await recordMutation({
+    actor,
+    projectId,
+    action: "CREATE",
+    targetType: config.targetType,
+    targetId: record.id,
+    beforeSnapshot: null,
+    afterSnapshot: snapshot(record),
+    transactionId: txId,
+  });
+  return { record, commandId: log.commandId };
+}
+
+async function updateWithLog(config: TargetConfig, actor: CurrentActor, id: string, data: Body) {
+  const { record: before, projectId } = await requireOwnedTarget(config, id, actor);
+  const record = await config.delegate.update({ where: { id }, data });
+  const log = await recordMutation({
+    actor,
+    projectId,
+    action: "UPDATE",
+    targetType: config.targetType,
+    targetId: id,
+    beforeSnapshot: snapshot(before),
+    afterSnapshot: snapshot(record),
+  });
+  return { record, commandId: log.commandId };
+}
+
+async function softDeleteWithLog(config: TargetConfig, actor: CurrentActor, id: string, reason?: string) {
+  const { record: before, projectId } = await requireOwnedTarget(config, id, actor);
+  const record = await config.delegate.update({ where: { id }, data: { deletedAt: new Date() } });
+  const log = await recordMutation({
+    actor,
+    projectId,
+    action: "DELETE",
+    targetType: config.targetType,
+    targetId: id,
+    beforeSnapshot: snapshot(before),
+    afterSnapshot: snapshot({ ...record, deleteReason: reason }),
+  });
+  return { record, commandId: log.commandId };
 }
 
 function handleError(error: unknown) {
@@ -38,18 +192,109 @@ function handleError(error: unknown) {
   return errorResponse("INTERNAL_ERROR", "Unexpected server error.", 500);
 }
 
+async function exportableProject(projectId: string) {
+  return prisma.project.findFirstOrThrow({
+    where: { id: projectId, deletedAt: null },
+    include: {
+      chapters: { where: { deletedAt: null }, orderBy: { order: "asc" } },
+      scenes: { where: { deletedAt: null }, orderBy: { order: "asc" } },
+      characters: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      worldNotes: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      foreshadowings: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      plotThreads: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      revisionTodos: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
+    },
+  });
+}
+
+async function ensureJsonExportAllowed(userId: string) {
+  const plan = await getPlan(userId);
+  if (plan === "FREE") {
+    throw new PlanLimitError("Plus plan is required to export JSON.", 0, 1);
+  }
+}
+
+async function handleIndividualRoute(method: string, path: string[], actor: CurrentActor, body: Body) {
+  const routeMap: Record<string, TargetConfig> = {
+    chapters: mutationTargets.CHAPTER,
+    scenes: mutationTargets.SCENE,
+    characters: mutationTargets.CHARACTER,
+    "character-notes": mutationTargets.CHARACTER_NOTE,
+    "world-notes": mutationTargets.WORLD_NOTE,
+    foreshadowings: mutationTargets.FORESHADOWING,
+    "plot-threads": mutationTargets.PLOT_THREAD,
+    "revision-todos": mutationTargets.REVISION_TODO,
+    "story-state-snapshots": mutationTargets.STORY_STATE_SNAPSHOT,
+  };
+  const config = routeMap[path[0]];
+  const id = path[1];
+  if (!config || !id || path.length !== 2) return null;
+
+  if (method === "GET" && (config.targetType === "SCENE" || config.targetType === "CHARACTER")) {
+    const { record } = await requireOwnedTarget(config, id, actor);
+    return json({ [config.responseKey]: record });
+  }
+  if (method === "PATCH") {
+    const input = config.updateSchema.partial().parse(body);
+    const { record, commandId: undoToken } = await updateWithLog(config, actor, id, input);
+    return json({ [config.responseKey]: record, commandId: undoToken });
+  }
+  if (method === "DELETE") {
+    const { commandId: undoToken } = await softDeleteWithLog(config, actor, id);
+    return json({ ok: true, commandId: undoToken });
+  }
+  return null;
+}
+
 export async function handleWebApi(method: string, path: string[], actor: CurrentActor, body: Body) {
   try {
+    const individual = await handleIndividualRoute(method, path, actor, body);
+    if (individual) return individual;
+
+    if (path[0] === "characters" && path[1] && path[2] === "notes") {
+      const { record: character, projectId } = await requireOwnedTarget(mutationTargets.CHARACTER, path[1], actor);
+      if (method === "GET") {
+        return json({ characterNotes: await prisma.characterNote.findMany({ where: { characterId: character.id, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
+      }
+      if (method === "POST") {
+        const input = createCharacterNoteSchema.omit({ characterId: true, characterName: true }).parse(body);
+        const { record, commandId: undoToken } = await createWithLog(mutationTargets.CHARACTER_NOTE, actor, projectId, { ...input, projectId, characterId: character.id });
+        return json({ characterNote: record, commandId: undoToken }, { status: 201 });
+      }
+    }
+
     if (path[0] === "projects" && path.length === 1) {
       if (method === "GET") {
-        return json({ projects: await prisma.project.findMany({ where: { userId: actor.userId }, orderBy: { updatedAt: "desc" } }) });
+        return json({ projects: await prisma.project.findMany({ where: { userId: actor.userId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
       }
       if (method === "POST") {
         await assertCanCreateProject(actor.userId);
         const input = createProjectSchema.parse(body);
+        const txId = transactionId();
         const project = await prisma.project.create({ data: { ...input, userId: actor.userId } });
-        await prisma.storyStateSnapshot.create({ data: { projectId: project.id, summary: input.premise ?? `${input.title} の初期状態` } });
-        return json({ project }, { status: 201 });
+        const log = await recordMutation({
+          actor,
+          projectId: project.id,
+          action: "CREATE",
+          targetType: "PROJECT",
+          targetId: project.id,
+          beforeSnapshot: null,
+          afterSnapshot: snapshot(project),
+          transactionId: txId,
+        });
+        const state = await prisma.storyStateSnapshot.create({ data: { projectId: project.id, summary: input.premise ?? `${input.title} initial state` } });
+        await recordMutation({
+          actor,
+          projectId: project.id,
+          action: "CREATE",
+          targetType: "STORY_STATE_SNAPSHOT",
+          targetId: state.id,
+          beforeSnapshot: null,
+          afterSnapshot: snapshot(state),
+          transactionId: txId,
+        });
+        return json({ project, commandId: log.commandId, transactionId: txId }, { status: 201 });
       }
     }
 
@@ -57,106 +302,103 @@ export async function handleWebApi(method: string, path: string[], actor: Curren
       const projectId = path[1];
       if (path.length === 2) {
         await requireOwnedProject(projectId, actor);
-        if (method === "GET") {
-          const project = await prisma.project.findUnique({ where: { id: projectId } });
-          return json({ project });
-        }
+        if (method === "GET") return json({ project: await prisma.project.findFirst({ where: { id: projectId, deletedAt: null } }) });
         if (method === "PATCH") {
           const input = createProjectSchema.partial().parse(body);
-          return json({ project: await prisma.project.update({ where: { id: projectId }, data: input }) });
+          const { record, commandId: undoToken } = await updateWithLog(mutationTargets.PROJECT, actor, projectId, input);
+          return json({ project: record, commandId: undoToken });
         }
         if (method === "DELETE") {
-          await prisma.project.delete({ where: { id: projectId } });
-          return json({ ok: true });
+          const { commandId: undoToken } = await softDeleteWithLog(mutationTargets.PROJECT, actor, projectId);
+          return json({ ok: true, commandId: undoToken });
         }
       }
 
       await requireOwnedProject(projectId, actor);
       const collection = path[2];
       if (collection === "chapters") {
-        if (method === "GET") return json({ chapters: await prisma.chapter.findMany({ where: { projectId }, orderBy: { order: "asc" } }) });
+        if (method === "GET") return json({ chapters: await prisma.chapter.findMany({ where: { projectId, deletedAt: null }, orderBy: { order: "asc" } }) });
         if (method === "POST") {
           const input = createChapterSchema.parse(body);
-          const order = input.order ?? await prisma.chapter.count({ where: { projectId } });
-          return json({ chapter: await prisma.chapter.create({ data: { ...input, order, projectId } }) }, { status: 201 });
+          const order = input.order ?? await prisma.chapter.count({ where: { projectId, deletedAt: null } });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.CHAPTER, actor, projectId, { ...input, order, projectId });
+          return json({ chapter: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "scenes") {
-        if (method === "GET") return json({ scenes: await prisma.scene.findMany({ where: { projectId }, orderBy: { order: "asc" } }) });
+        if (method === "GET") return json({ scenes: await prisma.scene.findMany({ where: { projectId, deletedAt: null }, orderBy: { order: "asc" } }) });
         if (method === "POST") {
           const input = createSceneSchema.parse(body);
           await assertCanAddScene(projectId, input.body.length);
-          const order = input.order ?? await prisma.scene.count({ where: { projectId } });
-          return json({ scene: await prisma.scene.create({ data: { ...input, order, projectId } }) }, { status: 201 });
+          const order = input.order ?? await prisma.scene.count({ where: { projectId, deletedAt: null } });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.SCENE, actor, projectId, { ...input, order, projectId });
+          return json({ scene: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "characters") {
-        if (method === "GET") return json({ characters: await prisma.character.findMany({ where: { projectId }, orderBy: { updatedAt: "desc" } }) });
+        if (method === "GET") return json({ characters: await prisma.character.findMany({ where: { projectId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
         if (method === "POST") {
           await assertCountLimit(projectId, "charactersPerProject");
           const input = createCharacterSchema.parse(body);
-          return json({ character: await prisma.character.create({ data: { ...input, projectId } }) }, { status: 201 });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.CHARACTER, actor, projectId, { ...input, projectId });
+          return json({ character: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "world-notes") {
-        if (method === "GET") return json({ worldNotes: await prisma.worldNote.findMany({ where: { projectId }, orderBy: { updatedAt: "desc" } }) });
+        if (method === "GET") return json({ worldNotes: await prisma.worldNote.findMany({ where: { projectId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
         if (method === "POST") {
           await assertCountLimit(projectId, "worldNotesPerProject");
           const input = createWorldNoteSchema.parse(body);
-          return json({ worldNote: await prisma.worldNote.create({ data: { ...input, projectId } }) }, { status: 201 });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.WORLD_NOTE, actor, projectId, { ...input, projectId });
+          return json({ worldNote: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "foreshadowings") {
-        if (method === "GET") return json({ foreshadowings: await prisma.foreshadowing.findMany({ where: { projectId }, orderBy: { updatedAt: "desc" } }) });
+        if (method === "GET") return json({ foreshadowings: await prisma.foreshadowing.findMany({ where: { projectId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
         if (method === "POST") {
           await assertCountLimit(projectId, "foreshadowingsPerProject");
           const input = createForeshadowingSchema.parse(body);
-          return json({ foreshadowing: await prisma.foreshadowing.create({ data: { ...input, projectId } }) }, { status: 201 });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.FORESHADOWING, actor, projectId, { ...input, projectId });
+          return json({ foreshadowing: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "plot-threads") {
-        if (method === "GET") return json({ plotThreads: await prisma.plotThread.findMany({ where: { projectId }, orderBy: { updatedAt: "desc" } }) });
+        if (method === "GET") return json({ plotThreads: await prisma.plotThread.findMany({ where: { projectId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
         if (method === "POST") {
           await assertCountLimit(projectId, "plotThreadsPerProject");
           const input = createPlotThreadSchema.parse(body);
-          return json({ plotThread: await prisma.plotThread.create({ data: { ...input, projectId } }) }, { status: 201 });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.PLOT_THREAD, actor, projectId, { ...input, projectId });
+          return json({ plotThread: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "revision-todos") {
-        if (method === "GET") return json({ revisionTodos: await prisma.revisionTodo.findMany({ where: { projectId }, orderBy: { updatedAt: "desc" } }) });
+        if (method === "GET") return json({ revisionTodos: await prisma.revisionTodo.findMany({ where: { projectId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
         if (method === "POST") {
           await assertCountLimit(projectId, "revisionTodosPerProject");
           const input = createRevisionTodoSchema.parse(body);
-          return json({ revisionTodo: await prisma.revisionTodo.create({ data: { ...input, projectId } }) }, { status: 201 });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.REVISION_TODO, actor, projectId, { ...input, projectId });
+          return json({ revisionTodo: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "story-state-snapshots") {
-        if (method === "GET") return json({ storyStateSnapshots: await prisma.storyStateSnapshot.findMany({ where: { projectId }, orderBy: { createdAt: "desc" } }) });
+        if (method === "GET") return json({ storyStateSnapshots: await prisma.storyStateSnapshot.findMany({ where: { projectId, deletedAt: null }, orderBy: { createdAt: "desc" } }) });
         if (method === "POST") {
           await assertCountLimit(projectId, "storySnapshotsPerProject");
           const input = createStoryStateSnapshotSchema.parse(body);
-          return json({ storyStateSnapshot: await prisma.storyStateSnapshot.create({ data: { ...input, projectId } }) }, { status: 201 });
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.STORY_STATE_SNAPSHOT, actor, projectId, { ...input, projectId });
+          return json({ storyStateSnapshot: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "story-state" && path[3] === "latest" && method === "GET") {
-        return json({ latestStoryState: await prisma.storyStateSnapshot.findFirst({ where: { projectId }, orderBy: { createdAt: "desc" } }) });
+        return json({ latestStoryState: await prisma.storyStateSnapshot.findFirst({ where: { projectId, deletedAt: null }, orderBy: { createdAt: "desc" } }) });
       }
       if (collection === "export") {
-        const project = await prisma.project.findUniqueOrThrow({
-          where: { id: projectId },
-          include: {
-            chapters: true,
-            scenes: true,
-            characters: true,
-            worldNotes: true,
-            foreshadowings: true,
-            plotThreads: true,
-            revisionTodos: true,
-            storyStateSnapshots: { orderBy: { createdAt: "desc" } },
-          },
-        });
+        const project = await exportableProject(projectId);
         if (path[3] === "markdown") return new Response(renderMarkdown(project), { headers: { "content-type": "text/markdown; charset=utf-8" } });
-        if (path[3] === "json") return json(project);
+        if (path[3] === "json") {
+          await ensureJsonExportAllowed(actor.userId);
+          return json(project);
+        }
       }
     }
 
@@ -166,41 +408,121 @@ export async function handleWebApi(method: string, path: string[], actor: Curren
   }
 }
 
+async function rollbackOne(log: any, actor: CurrentActor, force: boolean) {
+  const config = mutationTargets[log.targetType as TargetType];
+  if (!config || log.rolledBackAt || log.action === "ROLLBACK") {
+    throw new Response(JSON.stringify({ error: "ROLLBACK_NOT_ALLOWED", message: "Command cannot be rolled back." }), { status: 409 });
+  }
+  const laterMutation = await prisma.mutationLog.findFirst({
+    where: {
+      targetType: log.targetType,
+      targetId: log.targetId,
+      createdAt: { gt: log.createdAt },
+      action: { not: "ROLLBACK" },
+      rolledBackAt: null,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  if (laterMutation && !force) {
+    return { conflict: true, commandId: log.commandId, conflictingCommandId: laterMutation.commandId };
+  }
+
+  const before = await config.delegate.findFirst({ where: { id: log.targetId } });
+  let after = null;
+  if (log.action === "CREATE") {
+    after = await config.delegate.update({ where: { id: log.targetId }, data: { deletedAt: new Date() } });
+  } else if (log.action === "DELETE") {
+    after = await config.delegate.update({ where: { id: log.targetId }, data: { deletedAt: null } });
+  } else if (log.action === "UPDATE") {
+    after = await config.delegate.update({ where: { id: log.targetId }, data: restoreData(log.beforeSnapshot as Snapshot) });
+  }
+  await prisma.mutationLog.update({ where: { id: log.id }, data: { rolledBackAt: new Date() } });
+  const rollbackLog = await recordMutation({
+    actor,
+    projectId: log.projectId,
+    action: "ROLLBACK",
+    targetType: log.targetType,
+    targetId: log.targetId,
+    beforeSnapshot: snapshot(before),
+    afterSnapshot: snapshot(after),
+  });
+  return { conflict: false, commandId: log.commandId, rollbackCommandId: rollbackLog.commandId, targetType: log.targetType, targetId: log.targetId };
+}
+
+async function rollbackCommand(actor: CurrentActor, body: Body) {
+  const projectId = String(body.projectId ?? "");
+  if (!projectId) return errorResponse("VALIDATION_ERROR", "projectId is required.");
+  await requireOwnedProjectForRollback(projectId, actor);
+  const force = body.force === true;
+  const requestedTransactionId = typeof body.transactionId === "string" ? body.transactionId : "";
+  const requestedCommandId = typeof body.commandId === "string" ? body.commandId : "";
+
+  let logs: any[] = [];
+  if (requestedTransactionId) {
+    logs = await prisma.mutationLog.findMany({
+      where: { userId: actor.userId, projectId, transactionId: requestedTransactionId, rolledBackAt: null, action: { not: "ROLLBACK" } },
+      orderBy: { createdAt: "desc" },
+    });
+  } else if (requestedCommandId) {
+    const log = await prisma.mutationLog.findFirst({
+      where: { userId: actor.userId, projectId, commandId: requestedCommandId, rolledBackAt: null, action: { not: "ROLLBACK" } },
+    });
+    if (log) logs = [log];
+  } else {
+    const log = await prisma.mutationLog.findFirst({
+      where: { userId: actor.userId, projectId, rolledBackAt: null, action: { not: "ROLLBACK" } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (log) logs = [log];
+  }
+  if (logs.length === 0) return errorResponse("NOT_FOUND", "Rollback target was not found.", 404);
+
+  const results = [];
+  for (const log of logs) {
+    const result = await rollbackOne(log, actor, force);
+    if (result.conflict) {
+      return errorResponse("ROLLBACK_CONFLICT", "A later command has changed the same data. Retry with force: true to override.", 409, result);
+    }
+    results.push(result);
+  }
+
+  return json({
+    ok: true,
+    rolledBackCommandIds: results.map((item) => item.commandId),
+    rolledBackTransactionId: requestedTransactionId || null,
+    result: results.at(-1) ?? null,
+  });
+}
+
 export async function handleMcpApi(action: string, actor: CurrentActor, body: Body) {
   try {
     if (action === "list-private-projects") {
       const projects = await prisma.project.findMany({
-        where: { userId: actor.userId },
+        where: { userId: actor.userId, deletedAt: null },
         select: { id: true, title: true, genre: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
       });
       return json({ projects });
     }
-    if (action === "create-private-project") {
-      return handleWebApi("POST", ["projects"], actor, body);
-    }
+    if (action === "create-private-project") return handleWebApi("POST", ["projects"], actor, body);
+
     const projectId = String(body.projectId ?? "");
     if (!projectId) return errorResponse("VALIDATION_ERROR", "projectId is required.");
+    if (action === "rollback-command" || action === "undo-last-command") return rollbackCommand(actor, action === "undo-last-command" ? { projectId, force: body.force } : body);
     await requireOwnedProject(projectId, actor);
 
     if (action === "get-private-project-context" || action === "get-next-generation-context") {
-      const project = await prisma.project.findUniqueOrThrow({
-        where: { id: projectId },
+      const project = await prisma.project.findFirstOrThrow({
+        where: { id: projectId, deletedAt: null },
         include: {
-          characters: true,
-          plotThreads: { where: { status: { in: ["NOT_STARTED", "IN_PROGRESS", "ON_HOLD"] } } },
-          foreshadowings: { where: { status: { in: ["UNPLANTED", "PLANTED", "IN_PROGRESS"] } } },
-          storyStateSnapshots: { orderBy: { createdAt: "desc" }, take: 1 },
+          characters: { where: { deletedAt: null } },
+          plotThreads: { where: { deletedAt: null, status: { in: ["NOT_STARTED", "IN_PROGRESS", "ON_HOLD"] } } },
+          foreshadowings: { where: { deletedAt: null, status: { in: ["UNPLANTED", "PLANTED", "IN_PROGRESS"] } } },
+          storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, take: 1 },
         },
       });
       return json({
-        project: {
-          id: project.id,
-          title: project.title,
-          genre: project.genre,
-          premise: project.premise,
-          tone: project.tone,
-        },
+        project: { id: project.id, title: project.title, genre: project.genre, premise: project.premise, tone: project.tone },
         latestStoryState: project.storyStateSnapshots[0] ?? null,
         characters: project.characters,
         activePlotThreads: project.plotThreads,
@@ -208,16 +530,8 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
       });
     }
     if (action === "save-generated-scene") {
-      const chapterTitle = String(body.chapterTitle ?? "");
-      let chapterId = typeof body.chapterId === "string" ? body.chapterId : undefined;
-      if (!chapterId && chapterTitle) {
-        const existing = await prisma.chapter.findFirst({ where: { projectId, title: chapterTitle } });
-        chapterId = existing?.id ?? (await prisma.chapter.create({
-          data: { projectId, title: chapterTitle, order: await prisma.chapter.count({ where: { projectId } }) },
-        })).id;
-      }
-      return handleWebApi("POST", ["projects", projectId, "scenes"], actor, {
-        chapterId,
+      const input = createSceneSchema.parse({
+        chapterId: body.chapterId,
         title: body.sceneTitle ?? body.title,
         body: body.body,
         summary: body.summary,
@@ -225,32 +539,48 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
         generationPrompt: body.generationPrompt,
         createdBy: "CHATGPT",
       });
+      await assertCanAddScene(projectId, input.body.length);
+      const txId = transactionId();
+      const chapterTitle = String(body.chapterTitle ?? "");
+      let chapterId = input.chapterId;
+      if (!chapterId && chapterTitle) {
+        const existing = await prisma.chapter.findFirst({ where: { projectId, title: chapterTitle, deletedAt: null } });
+        if (existing) {
+          chapterId = existing.id;
+        } else {
+          const order = await prisma.chapter.count({ where: { projectId, deletedAt: null } });
+          const { record: chapter } = await createWithLog(mutationTargets.CHAPTER, actor, projectId, { projectId, title: chapterTitle, order }, txId);
+          chapterId = chapter.id;
+        }
+      }
+      const order = input.order ?? await prisma.scene.count({ where: { projectId, deletedAt: null } });
+      const { record: scene, commandId: sceneCommandId } = await createWithLog(mutationTargets.SCENE, actor, projectId, { ...input, chapterId, order, projectId }, txId);
+      return json({ scene, commandId: sceneCommandId, transactionId: txId }, { status: 201 });
     }
     if (action === "save-character-note") {
       const input = createCharacterNoteSchema.parse(body);
-      let character = input.characterId ? await prisma.character.findFirst({ where: { id: input.characterId, projectId } }) : null;
+      const txId = transactionId();
+      let character = input.characterId ? await prisma.character.findFirst({ where: { id: input.characterId, projectId, deletedAt: null } }) : null;
       if (!character) {
         const name = input.characterName ?? "Unknown";
-        character = await prisma.character.findUnique({ where: { projectId_name: { projectId, name } } });
+        character = await prisma.character.findFirst({ where: { projectId, name, deletedAt: null } });
         if (!character) {
           await assertCountLimit(projectId, "charactersPerProject");
-          character = await prisma.character.create({ data: { projectId, name } });
+          const created = await createWithLog(mutationTargets.CHARACTER, actor, projectId, { projectId, name }, txId);
+          character = created.record;
         }
       }
       if (!character) return errorResponse("NOT_FOUND", "Character not found.", 404);
-      return json({
-        characterNote: await prisma.characterNote.create({
-          data: {
-            projectId,
-            characterId: character.id,
-            title: input.title,
-            body: input.body,
-            category: input.category,
-            importance: input.importance,
-            relatedSceneId: input.relatedSceneId,
-          },
-        }),
-      }, { status: 201 });
+      const { record: characterNote, commandId: noteCommandId } = await createWithLog(mutationTargets.CHARACTER_NOTE, actor, projectId, {
+        projectId,
+        characterId: character.id,
+        title: input.title,
+        body: input.body,
+        category: input.category,
+        importance: input.importance,
+        relatedSceneId: input.relatedSceneId,
+      }, txId);
+      return json({ characterNote, commandId: noteCommandId, transactionId: txId }, { status: 201 });
     }
     const actionMap = {
       "save-world-note": ["world-notes"],
@@ -260,6 +590,15 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
       "save-story-state-snapshot": ["story-state-snapshots"],
     } as const;
     if (action in actionMap) return handleWebApi("POST", ["projects", projectId, actionMap[action as keyof typeof actionMap][0]], actor, body);
+    if (action === "delete-project-data") {
+      const targetType = String(body.targetType ?? "") as TargetType;
+      const config = mutationTargets[targetType];
+      if (!config) return errorResponse("VALIDATION_ERROR", "targetType is invalid.");
+      const targetId = targetType === "PROJECT" ? String(body.targetId ?? projectId) : String(body.targetId ?? "");
+      if (!targetId) return errorResponse("VALIDATION_ERROR", "targetId is required.");
+      const { record, commandId: undoToken } = await softDeleteWithLog(config, actor, targetId, typeof body.reason === "string" ? body.reason : undefined);
+      return json({ ok: true, deleted: { targetType, targetId, deletedAt: record.deletedAt }, undoToken });
+    }
     return errorResponse("NOT_FOUND", "MCP action not found.", 404);
   } catch (error) {
     return handleError(error);

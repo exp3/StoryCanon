@@ -104,6 +104,7 @@ model User {
   apiTokens     ApiToken[]
   projects      Project[]
   auditLogs     AuditLog[]
+  mutationLogs  MutationLog[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 }
@@ -161,6 +162,7 @@ model ApiToken {
   tokenPrefix String
   lastUsedAt  DateTime?
   revokedAt   DateTime?
+  deletedAt   DateTime?
   createdAt   DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -179,6 +181,7 @@ model Project {
   forbiddenElements  String?
   userPreferences    String?
   visibility         Visibility           @default(PRIVATE)
+  deletedAt          DateTime?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -192,8 +195,10 @@ model Project {
   revisionTodos      RevisionTodo[]
   storyStateSnapshots StoryStateSnapshot[]
   exportJobs         ExportJob[]
+  mutationLogs       MutationLog[]
 
   @@index([userId, updatedAt])
+  @@index([userId, deletedAt])
 }
 
 model Chapter {
@@ -203,12 +208,14 @@ model Chapter {
   order     Int
   summary   String?
   purpose   String?
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   scenes    Scene[]
 
   @@unique([projectId, order])
+  @@index([projectId, deletedAt])
 }
 
 model Scene {
@@ -222,12 +229,14 @@ model Scene {
   occurredEvents   String?
   generationPrompt String?
   createdBy        CreatedBy @default(USER)
+  deletedAt        DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   chapter          Chapter?  @relation(fields: [chapterId], references: [id], onDelete: SetNull)
 
   @@index([projectId, order])
+  @@index([projectId, deletedAt])
 }
 
 model Character {
@@ -245,12 +254,14 @@ model Character {
   currentState  String?
   firstSceneId  String?
   lastSceneId   String?
+  deletedAt     DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   notes         CharacterNote[]
 
   @@unique([projectId, name])
+  @@index([projectId, deletedAt])
 }
 
 model CharacterNote {
@@ -262,10 +273,14 @@ model CharacterNote {
   category       CharacterNoteCategory?
   importance     Importance             @default(MEDIUM)
   relatedSceneId String?
+  deletedAt      DateTime?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
   project        Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   character      Character              @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
+  @@index([characterId, deletedAt])
 }
 
 model WorldNote {
@@ -276,9 +291,12 @@ model WorldNote {
   category       WorldNoteCategory @default(OTHER)
   importance     Importance        @default(MEDIUM)
   relatedSceneId String?
+  deletedAt      DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
 }
 
 model PlotThread {
@@ -290,9 +308,12 @@ model PlotThread {
   startSceneId        String?
   currentState        String?
   resolutionCondition String?
+  deletedAt           DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   project             Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
 }
 
 model Foreshadowing {
@@ -305,9 +326,12 @@ model Foreshadowing {
   resolvedSceneId   String?
   status            ForeshadowingStatus @default(UNPLANTED)
   importance        Importance          @default(MEDIUM)
+  deletedAt         DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   project           Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
 }
 
 model RevisionTodo {
@@ -321,9 +345,12 @@ model RevisionTodo {
   priority   RevisionPriority @default(MEDIUM)
   status     RevisionStatus   @default(OPEN)
   source     RevisionSource   @default(USER)
+  deletedAt  DateTime?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
   project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
 }
 
 model StoryStateSnapshot {
@@ -339,10 +366,12 @@ model StoryStateSnapshot {
   avoidElements            String?
   writingRules             String?
   userPreferences          String?
+  deletedAt                DateTime?
   createdAt                DateTime @default(now())
   project                  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
+  @@index([projectId, deletedAt])
 }
 
 model ExportJob {
@@ -351,6 +380,7 @@ model ExportJob {
   kind      String
   status    String
   s3Key     String?
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -365,4 +395,26 @@ model AuditLog {
   metadata   Json?
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MutationLog {
+  id             String    @id @default(cuid())
+  commandId      String    @unique
+  transactionId  String?
+  userId         String
+  apiTokenId     String?
+  projectId      String
+  action         String
+  targetType     String
+  targetId       String
+  beforeSnapshot Json?
+  afterSnapshot  Json?
+  rolledBackAt   DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId, createdAt])
+  @@index([userId, projectId, createdAt])
+  @@index([targetType, targetId, createdAt])
 }

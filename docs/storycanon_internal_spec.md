@@ -450,9 +450,28 @@ createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 ```
 
-MVPでは物理削除を許容する。
+MVPから論理削除を採用する。
 
-本番では `deletedAt` を導入する余地を残す。
+削除可能な業務データには `deletedAt` を持たせ、通常の一覧・詳細・文脈取得・エクスポートでは `deletedAt = null` のデータのみを扱う。
+
+```prisma
+deletedAt DateTime?
+```
+
+対象：
+
+- Project
+- Chapter
+- Scene
+- Character
+- CharacterNote
+- WorldNote
+- PlotThread
+- Foreshadowing
+- RevisionTodo
+- StoryStateSnapshot
+- ApiToken
+- ExportJob
 
 ---
 
@@ -846,13 +865,26 @@ Character.project.userId === currentUser.id
 
 ### 11.4 削除権限
 
-MVPでは ChatGPT / MCP から削除不可。
+MVPでは Web アプリと MCP風API の両方から削除できる。
 
-削除は Web アプリからのみ行う。
+MCP風APIからの削除はすべて論理削除とし、物理削除は行わない。
+
+MCPクライアントには、削除権限を読み取り・追加・更新とは別に明示する。
+
+```text
+作品データの論理削除
+MCP指令のロールバック
+```
+
+MCPからのアカウント削除は不可。アカウント削除は Web アプリ側のみで行う。
 
 ---
 
 ## 12. Web API仕様
+
+`DELETE` メソッドは、特記がない限り物理削除ではなく `deletedAt` を設定する論理削除として扱う。
+
+論理削除済みデータは、通常の `GET`、MCP文脈取得、エクスポートには含めない。
 
 ### 12.1 Projects
 
@@ -977,6 +1009,9 @@ MVPでは正式な MCP Server ではなく、将来MCP toolに包みやすいRES
 /api/mcp/save-revision-todo
 /api/mcp/save-story-state-snapshot
 /api/mcp/get-next-generation-context
+/api/mcp/delete-project-data
+/api/mcp/rollback-command
+/api/mcp/undo-last-command
 ```
 
 ---
@@ -1192,6 +1227,149 @@ Request:
   "writingRules": "文体ルール..."
 }
 ```
+
+---
+
+### 13.12 delete_project_data
+
+目的：MCPクライアントから、作品配下のデータを論理削除する。
+
+MCPからの削除は取り消し可能にするため、必ず `deletedAt` を設定する論理削除とし、物理削除は行わない。
+
+Request:
+
+```json
+{
+  "projectId": "project_xxx",
+  "targetType": "SCENE",
+  "targetId": "scene_xxx",
+  "reason": "直前に保存したシーンを取り消したい"
+}
+```
+
+`targetType`:
+
+```text
+PROJECT
+CHAPTER
+SCENE
+CHARACTER
+CHARACTER_NOTE
+WORLD_NOTE
+FORESHADOWING
+PLOT_THREAD
+REVISION_TODO
+STORY_STATE_SNAPSHOT
+```
+
+処理：
+
+- APIトークン認証
+- Project所有者チェック
+- 対象データが project 配下にあることを確認
+- 対象データの `deletedAt` を現在時刻に更新
+- 削除操作を取り消せるよう、MCP操作ログに記録
+
+Response:
+
+```json
+{
+  "ok": true,
+  "deleted": {
+    "targetType": "SCENE",
+    "targetId": "scene_xxx",
+    "deletedAt": "2026-07-04T10:00:00Z"
+  },
+  "undoToken": "mcp_cmd_xxx"
+}
+```
+
+---
+
+### 13.13 rollback_command
+
+目的：MCPクライアントまたはWebアプリから実行された保存・更新・論理削除操作を、操作ログに基づいてロールバックする。
+
+対象：
+
+- create-private-project
+- save-generated-scene
+- save-character-note
+- save-world-note
+- save-foreshadowing
+- save-plot-thread
+- save-revision-todo
+- save-story-state-snapshot
+- delete-project-data
+
+方針：
+
+- 読み取り系 API はロールバック対象にしない。
+- 保存・更新・論理削除などのミューテーションは、成功時に必ず rollback 用操作ログを残す。
+- 操作ログは `commandId` 単位で記録する。
+- 1つのユーザー指令で複数レコードを変更する場合は、同じ `transactionId` を付与し、一括ロールバックできるようにする。
+- `commandId` を指定した場合は、その単一操作をロールバックする。
+- `transactionId` を指定した場合は、その指令に含まれる全操作を逆順でロールバックする。
+- `commandId` / `transactionId` を省略した場合は、同一APIトークン・同一ユーザー・同一projectの最後に成功した未ロールバックのミューテーションを対象にする。
+- ロールバック済みの操作は再度ロールバックできない。
+- ロールバック自体も操作ログに記録する。
+- 作成操作のロールバックは、作成されたデータを論理削除する。
+- 論理削除操作のロールバックは、対象データの `deletedAt` を `null` に戻す。
+- 更新操作のロールバックは、更新前スナップショットを復元する。
+- ロールバック対象の後続操作が同じデータを変更している場合は、原則として競合エラーを返し、`force: true` が指定された場合のみ実行する。
+
+Request:
+
+```json
+{
+  "projectId": "project_xxx",
+  "commandId": "mcp_cmd_xxx",
+  "transactionId": "mcp_tx_xxx",
+  "force": false
+}
+```
+
+`commandId` と `transactionId` はどちらも省略可能。ただし、両方指定された場合は `transactionId` を優先し、指令単位でロールバックする。
+
+Response:
+
+```json
+{
+  "ok": true,
+  "rolledBackCommandIds": ["mcp_cmd_xxx"],
+  "rolledBackTransactionId": "mcp_tx_xxx",
+  "result": {
+    "targetType": "SCENE",
+    "targetId": "scene_xxx",
+    "restored": true
+  }
+}
+```
+
+実装メモ：
+
+- `AuditLog` は本文そのものを保存しない方針のため、ロールバックに必要な最小情報を保存する `MutationLog` などの専用モデルを追加する。
+- `MutationLog` には `commandId`, `transactionId`, `userId`, `apiTokenId`, `projectId`, `action`, `targetType`, `targetId`, `beforeSnapshot`, `afterSnapshot`, `rolledBackAt`, `createdAt` を持たせる。
+- 本文やメモの全文をログへ残す場合は、通常ログではなくロールバック専用の暗号化されたスナップショットとして扱い、保持期間を短くする。
+- MVPでは、作成操作・更新操作・論理削除操作のロールバックを対象にする。
+
+---
+
+### 13.14 undo_last_command
+
+目的：ユーザーが「今の操作を取り消して」と言いやすくするための、`rollback-command` の簡易エイリアス。
+
+`undo-last-command` は `commandId` / `transactionId` を指定しない `rollback-command` と同じ動作をする。
+
+Request:
+
+```json
+{
+  "projectId": "project_xxx"
+}
+```
+
+Response は `rollback-command` と同じ。
 
 ---
 
@@ -1436,17 +1614,25 @@ MVPではStripe連携をモックにして、DB上の plan を手動変更でき
 
 ## 22. 削除仕様
 
-MVPでは物理削除。
+MVPでは論理削除。
 
-Project削除時は関連データを cascade delete する。
+Project削除時は Project に `deletedAt` を設定し、通常画面・API・MCP文脈取得・エクスポートから除外する。
 
-MCP風APIから削除は不可。
+Project配下のデータも個別に論理削除できる。Project全体を論理削除した場合、配下データは物理削除せず、Projectの削除状態によって参照不可にする。
 
-本番では soft delete を検討する。
+WebアプリとMCP風APIの両方から論理削除できる。
+
+MCP風APIからの削除は `delete-project-data` を使う。
+
+MCP風APIからのロールバックは `rollback-command` を使う。
+
+直前操作だけを取り消す簡易操作として `undo-last-command` も用意する。
 
 ```ts
 deletedAt?: Date
 ```
+
+物理削除は、アカウント削除、法令・会計上の保持期間経過後のデータ消去、または管理者向けメンテナンス処理に限定する。
 
 ---
 
@@ -1459,7 +1645,9 @@ deletedAt?: Date
 - Pro / Plus判定はDBのplan値で行う
 - 公開機能なし
 - 作品はすべてprivate
-- 削除はWebアプリのみ
+- 削除はWebアプリとMCP風APIから可能
+- 削除は論理削除
+- MCP風APIには操作ログに基づくロールバックAPIを用意する
 - エディタはtextareaでよい
 - 本文はPostgreSQLに保存
 - Exportは同期処理でよい
@@ -1515,6 +1703,9 @@ deletedAt?: Date
 - save-plot-thread を実装する
 - save-revision-todo を実装する
 - save-story-state-snapshot を実装する
+- delete-project-data を実装する
+- rollback-command を実装する
+- undo-last-command を実装する
 
 ### 24.6 AWS CDK
 

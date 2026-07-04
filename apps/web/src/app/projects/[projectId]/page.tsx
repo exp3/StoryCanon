@@ -10,11 +10,13 @@ const tabs = [
   "Export",
 ];
 
-export default function ProjectDetailPage({ params }: { params: { projectId: string } }) {
+export default async function ProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await params;
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
       <header className="mb-6">
-        <p className="text-sm text-[#666]">{params.projectId}</p>
+        <p className="text-sm text-[#666]">{projectId}</p>
         <h1 className="mt-1 text-3xl font-semibold">Project detail</h1>
       </header>
       <nav className="mb-6 flex flex-wrap gap-2">
@@ -25,10 +27,12 @@ export default function ProjectDetailPage({ params }: { params: { projectId: str
         ))}
       </nav>
       <section className="grid gap-4 md:grid-cols-[1fr_320px]">
-        <textarea className="min-h-[520px] rounded border bg-white p-4" placeholder="本文またはメモ" />
+        <textarea className="min-h-[520px] rounded border bg-white p-4" placeholder="Manuscript or memo" />
         <aside className="rounded border bg-white p-4">
           <h2 className="font-semibold">Story State</h2>
-          <p className="mt-3 text-sm leading-6 text-[#555]">最新のあらすじ、未解決の伏線、次回候補を表示します。</p>
+          <p className="mt-3 text-sm leading-6 text-[#555]">
+            Latest story state, unresolved threads, and next options will appear here.
+          </p>
         </aside>
       </section>
     </main>

@@ -17,40 +17,40 @@ export function renderMarkdown(project: ExportableProject) {
   const lines: string[] = [
     `# ${project.title}`,
     "",
-    "## 概要",
+    "## Overview",
     project.premise ?? "",
     "",
-    "## 現在のストーリー状態",
+    "## Current Story State",
     project.storyStateSnapshots[0]?.summary ?? "",
     "",
-    "## キャラクター",
+    "## Characters",
   ];
 
   for (const character of project.characters) {
     lines.push(`- ${character.name}${character.role ? `: ${character.role}` : ""}${character.currentState ? ` / ${character.currentState}` : ""}`);
   }
 
-  lines.push("", "## 世界観メモ");
+  lines.push("", "## World Notes");
   for (const note of project.worldNotes) {
     lines.push(`### ${note.title}`, note.body, "");
   }
 
-  lines.push("## 伏線");
+  lines.push("## Foreshadowings");
   for (const item of project.foreshadowings) {
     lines.push(`- [${item.status}] ${item.title}: ${item.description}`);
   }
 
-  lines.push("", "## プロットスレッド");
+  lines.push("", "## Plot Threads");
   for (const thread of project.plotThreads) {
     lines.push(`- [${thread.status}] ${thread.title}${thread.description ? `: ${thread.description}` : ""}`);
   }
 
-  lines.push("", "## 修正TODO");
+  lines.push("", "## Revision Todos");
   for (const todo of project.revisionTodos) {
     lines.push(`- [${todo.status}] ${todo.title}: ${todo.problem}`);
   }
 
-  lines.push("", "## 本文");
+  lines.push("", "## Manuscript");
   const chapters = [...project.chapters].sort((a, b) => a.order - b.order);
   const scenes = [...project.scenes].sort((a, b) => a.order - b.order);
   for (const chapter of chapters) {
