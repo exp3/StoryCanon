@@ -64,7 +64,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <section className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">シーン一覧</h2>
-              <span className="text-sm text-[#666]">{project._count.scenes} 件</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[#666]">{project._count.scenes} 件</span>
+                <Link className="rounded border px-3 py-1 text-sm" href={`/projects/${project.id}/scenes/new`}>
+                  + 新規シーン
+                </Link>
+              </div>
             </div>
             {project.scenes.length === 0 ? (
               <p className="text-sm text-[#555]">まだシーンがありません。</p>
@@ -72,13 +77,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <ul className="space-y-3">
                 {project.scenes.map((scene) => (
                   <li key={scene.id} className="rounded border border-[#ece8dd] px-4 py-3">
-                    <div className="flex items-center justify-between gap-4">
+                    <Link className="flex items-center justify-between gap-4" href={`/projects/${project.id}/scenes/${scene.id}`}>
                       <div>
                         <p className="font-medium">{scene.title}</p>
                         {scene.summary ? <p className="mt-1 text-sm leading-6 text-[#555]">{scene.summary}</p> : null}
                       </div>
                       <span className="shrink-0 text-xs text-[#666]">{scene.updatedAt.toLocaleString("ja-JP")}</span>
-                    </div>
+                    </Link>
                   </li>
                 ))}
               </ul>

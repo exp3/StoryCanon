@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
     },
     servers: [{ url: serverUrl }],
     components: {
+      schemas: {},
       securitySchemes: {
         bearerAuth: { type: "http", scheme: "bearer", description: "StoryCanon の /settings で発行した API トークン" },
       },
