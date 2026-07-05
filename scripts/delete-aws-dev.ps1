@@ -118,4 +118,4 @@ if ($DestroyRetainedEcr) {
   Write-Host "Retained ECR repository cleanup skipped. Pass -DestroyRetainedEcr to delete $Prefix-web."
 }
 
-Write-Host "Delete request complete. Check CloudFormation, ECS Express Mode, RDS, VPC/NAT Gateway, ECR, S3, and Secrets Manager in $Region for leftovers."
+Write-Host "Delete request complete. Check CloudFormation, ECS Express Mode, RDS, VPC, ECR, S3, and Secrets Manager in $Region for leftovers."

@@ -13,7 +13,9 @@ async function dispatch(req: NextRequest) {
     return handleMcpApi(rest.join("/"), actor, body);
   }
 
-  return handleWebApi(req.method, [apiKind, ...rest].filter(Boolean), getWebActor(req), body);
+  const actor = await getWebActor(req);
+  if (!actor) return errorResponse("UNAUTHORIZED", "Sign-in is required.", 401);
+  return handleWebApi(req.method, [apiKind, ...rest].filter(Boolean), actor, body);
 }
 
 export const GET = dispatch;

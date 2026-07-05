@@ -15,7 +15,7 @@ if ($Stage -eq "prod" -and -not $AllowProd) {
 $Prefix = "storycanon-$Stage"
 
 Write-Host "Stopping AWS runtime resources for $Prefix in $Region."
-Write-Host "Note: this pauses App Runner and stops RDS only. VPC/NAT Gateway, Secrets, S3, ECR, and CloudFormation stacks remain and may still incur charges."
+Write-Host "Note: this pauses App Runner and stops RDS only. VPC, Secrets, S3, ECR, and CloudFormation stacks remain and may still incur charges."
 
 if (-not $SkipAppRunner) {
   $ServiceArn = aws apprunner list-services `
@@ -59,4 +59,4 @@ if (-not $SkipRds) {
   }
 }
 
-Write-Host "Stop request complete. Use scripts/delete-aws-dev.ps1 to remove the full dev environment and stop VPC/NAT charges."
+Write-Host "Stop request complete. Use scripts/delete-aws-dev.ps1 to remove the full dev environment and stop remaining VPC and runtime charges."

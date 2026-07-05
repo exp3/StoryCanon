@@ -232,10 +232,10 @@ AWS 環境を使ってよい。
 検証後にコストを止めるため、停止・削除手順も用意する。
 
 - [ ] `scripts/stop-aws-dev.ps1` で停止できる範囲と、ECS Express Mode は削除優先であることを確認する。
-- [ ] 停止では ECS Express Mode / ALB / VPC/NAT Gateway の料金が残る可能性を docs に明記する。
+- [ ] 停止では ECS Express Mode / ALB / VPC リソースの料金が残る可能性を docs に明記する。
 - [ ] `scripts/delete-aws-dev.ps1` で ECS Express Mode service と dev CloudFormation stacks を削除できることを確認する。
 - [ ] ECR repository は retain される可能性があるため、`-DestroyRetainedEcr` で削除できることを確認する。
-- [ ] 削除後に CloudFormation, ECS Express Mode, RDS, VPC/NAT Gateway, ECR, S3, Secrets Manager に残存リソースがないか確認する。
+- [ ] 削除後に CloudFormation, ECS Express Mode, RDS, VPC, ECR, S3, Secrets Manager に残存リソースがないか確認する。
 
 停止:
 

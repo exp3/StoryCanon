@@ -1,0 +1,70 @@
+name: deploy-main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      STAGE: ${{ vars.STORYCANON_STAGE }}
+      APP_DOMAIN_NAME: ${{ vars.APP_DOMAIN_NAME }}
+      NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
+      PAYMENT_MODE: ${{ vars.PAYMENT_MODE }}
+      BOOTSTRAP: ${{ vars.CDK_BOOTSTRAP }}
+      RECREATE_SERVICE: ${{ vars.ECS_RECREATE_SERVICE }}
+      IMAGE_TAG: ${{ github.sha }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      APP_API_TOKEN_PEPPER: ${{ secrets.APP_API_TOKEN_PEPPER }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build -w apps/web
+
+      - name: Build infra
+        run: npm run build -w infra
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Deploy to ECS Express
+        run: bash scripts/deploy-ecs-express.sh

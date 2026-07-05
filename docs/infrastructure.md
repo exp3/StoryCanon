@@ -4,8 +4,8 @@ StoryCanon is prepared for AWS deployment with CDK v2 TypeScript.
 
 ## Stacks
 
-- `NetworkStack`: VPC, public/private subnets, App Runner security group.
-- `DatabaseStack`: single-AZ encrypted RDS PostgreSQL in private subnets.
+- `NetworkStack`: VPC, public subnets for ECS Express ingress, isolated private subnets for RDS, application security group.
+- `DatabaseStack`: single-AZ encrypted RDS PostgreSQL in isolated private subnets.
 - `StorageStack`: private S3 bucket for Markdown/JSON export artifacts.
 - `SecretsStack`: application secrets used by the container runtime.
 - `AppRunnerStack`: legacy App Runner service definition. Do not use for new verification environments unless the AWS account can still create App Runner services.
@@ -88,6 +88,8 @@ ECS Express Mode health checks use `/api/health`, which returns a lightweight JS
 
 The ECS Express service is placed in the VPC public subnets so the generated `.on.aws` endpoint resolves publicly. The application can still reach the private RDS endpoint through VPC local routing and the database security group rule.
 
+For dev verification environments, the VPC intentionally uses `natGateways: 0`. The application runtime sits in public subnets, while RDS sits in isolated private subnets. This removes recurring NAT Gateway charges and makes teardown simpler.
+
 Manual CDK deployment is still possible:
 
 ```powershell
@@ -135,7 +137,7 @@ Use this when you want to pause the runtime after a short test but keep the Clou
 
 This pauses legacy App Runner and stops the RDS instance when possible.
 
-Important: ECS Express Mode and VPC resources such as NAT Gateway cannot be fully "stopped" by this script and may continue to incur charges. To stop runtime, ALB, VPC/NAT charges, destroy the dev environment.
+Important: ECS Express Mode, ALB, VPC resources, and other supporting resources cannot be fully "stopped" by this script and may continue to incur charges. For dev verification, prefer full deletion after testing.
 
 ## Delete dev environment
 
@@ -151,4 +153,4 @@ To also remove the retained ECR repository:
 .\scripts\delete-aws-dev.ps1 -Stage dev -Region ap-northeast-1 -ConfirmDestroy "delete-storycanon-dev" -DestroyRetainedEcr
 ```
 
-The delete script refuses to operate on `prod` unless `-AllowProd` is passed. After deletion, check CloudFormation, ECS Express Mode, RDS, VPC/NAT Gateway, ECR, S3, and Secrets Manager for leftovers.
+The delete script refuses to operate on `prod` unless `-AllowProd` is passed. After deletion, check CloudFormation, ECS Express Mode, RDS, VPC, ECR, S3, and Secrets Manager for leftovers. Older environments created before the NAT removal change may still leave a NAT Gateway behind if stack deletion fails midway.
