@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { CopyButton } from "@/components/copy-button";
 import { createApiToken, type CreateApiTokenState } from "./actions";
 
 const initialState: CreateApiTokenState = { error: null, token: null };
@@ -30,7 +31,10 @@ export function CreateTokenForm() {
       {state.token ? (
         <div className="rounded border border-amber-400 bg-amber-50 p-4 text-sm">
           <p className="font-medium">この画面を離れると二度と表示されません。今すぐコピーしてください。</p>
-          <code className="mt-2 block break-all rounded bg-white p-2">{state.token}</code>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="block flex-1 break-all rounded bg-white p-2">{state.token}</code>
+            <CopyButton value={state.token} />
+          </div>
         </div>
       ) : null}
     </form>

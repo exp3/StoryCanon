@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { CopyButton } from "@/components/copy-button";
 import { requireSessionUser } from "@/server/session";
 import { revokeApiToken } from "./actions";
 import { CreateTokenForm } from "./token-form";
@@ -44,7 +45,10 @@ export default async function SettingsPage() {
           <li>ChatGPTで「GPTを作成する(Create a GPT)」を開き、「Configure」タブに移動する。</li>
           <li>
             「Actions」→「Create new action」→「Import from URL」を選び、次のURLを貼り付ける。
-            <code className="mt-1 block break-all rounded bg-[#f7f7f4] p-2 text-xs">{openApiUrl}</code>
+            <span className="mt-1 flex items-center gap-2">
+              <code className="block flex-1 break-all rounded bg-[#f7f7f4] p-2 text-xs">{openApiUrl}</code>
+              <CopyButton value={openApiUrl} />
+            </span>
           </li>
           <li>
             「Authentication」を「API Key」に設定し、Auth Typeを「Bearer」にして、手順1でコピーしたトークンを貼り付ける。

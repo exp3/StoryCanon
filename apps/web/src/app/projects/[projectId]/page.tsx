@@ -17,6 +17,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         select: { id: true, title: true, summary: true, updatedAt: true },
       },
+      characters: {
+        where: { deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, name: true, role: true, updatedAt: true },
+      },
+      worldNotes: {
+        where: { deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, title: true, category: true, updatedAt: true },
+      },
       storyStateSnapshots: {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
@@ -90,10 +100,72 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <section className="rounded border bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-semibold">キャラクター</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[#666]">{project._count.characters} 件</span>
+                <Link className="rounded border px-3 py-1 text-sm" href={`/projects/${project.id}/characters/new`}>
+                  + 新規キャラクター
+                </Link>
+              </div>
+            </div>
+            {project.characters.length === 0 ? (
+              <p className="text-sm text-[#555]">まだキャラクターがありません。</p>
+            ) : (
+              <ul className="space-y-3">
+                {project.characters.map((character) => (
+                  <li key={character.id} className="rounded border border-[#ece8dd] px-4 py-3">
+                    <Link
+                      className="flex items-center justify-between gap-4"
+                      href={`/projects/${project.id}/characters/${character.id}`}
+                    >
+                      <div>
+                        <p className="font-medium">{character.name}</p>
+                        {character.role ? <p className="mt-1 text-sm leading-6 text-[#555]">{character.role}</p> : null}
+                      </div>
+                      <span className="shrink-0 text-xs text-[#666]">{character.updatedAt.toLocaleString("ja-JP")}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded border bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-semibold">世界観ノート</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[#666]">{project._count.worldNotes} 件</span>
+                <Link className="rounded border px-3 py-1 text-sm" href={`/projects/${project.id}/world-notes/new`}>
+                  + 新規世界観ノート
+                </Link>
+              </div>
+            </div>
+            {project.worldNotes.length === 0 ? (
+              <p className="text-sm text-[#555]">まだ世界観ノートがありません。</p>
+            ) : (
+              <ul className="space-y-3">
+                {project.worldNotes.map((worldNote) => (
+                  <li key={worldNote.id} className="rounded border border-[#ece8dd] px-4 py-3">
+                    <Link
+                      className="flex items-center justify-between gap-4"
+                      href={`/projects/${project.id}/world-notes/${worldNote.id}`}
+                    >
+                      <div>
+                        <p className="font-medium">{worldNote.title}</p>
+                        <p className="mt-1 text-sm leading-6 text-[#555]">{worldNote.category}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-[#666]">{worldNote.updatedAt.toLocaleString("ja-JP")}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-3">
             {[
-              { label: "キャラクター", value: project._count.characters },
-              { label: "世界観ノート", value: project._count.worldNotes },
               { label: "伏線", value: project._count.foreshadowings },
               { label: "プロットスレッド", value: project._count.plotThreads },
               { label: "TODO", value: project._count.revisionTodos },
