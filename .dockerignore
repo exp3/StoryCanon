@@ -1,0 +1,10 @@
+node_modules
+apps/web/.next
+infra/cdk.out
+infra/dist
+.env
+.env.local
+.env.*.local
+apps/web/.env
+apps/web/.env.local
+.git
