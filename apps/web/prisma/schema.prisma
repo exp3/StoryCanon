@@ -145,7 +145,7 @@ model VerificationToken {
 
 model Subscription {
   id                   String             @id @default(cuid())
-  userId               String
+  userId               String             @unique
   plan                 Plan               @default(FREE)
   status               SubscriptionStatus @default(ACTIVE)
   stripeCustomerId     String?

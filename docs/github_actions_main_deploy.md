@@ -43,6 +43,10 @@ Because the service update is done with a new image tag and ECS Express deployme
 - `ECS_RECREATE_SERVICE`
   - `true` or `false`
   - Use `true` only when immutable ECS Express settings must be recreated
+- `STRIPE_PRICE_PLUS`
+  - Stripe Price ID for the Plus plan monthly subscription
+- `STRIPE_PRICE_PRO`
+  - Stripe Price ID for the Pro plan monthly subscription
 
 ## Required GitHub repository secrets
 
@@ -52,7 +56,7 @@ Because the service update is done with a new image tag and ECS Express deployme
 - `NEXTAUTH_SECRET`
 - `APP_API_TOKEN_PEPPER`
 
-Optional:
+Required for billing (Stripe Checkout / Customer Portal / webhook):
 
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
@@ -92,6 +96,10 @@ Replace `<AWS_ACCOUNT_ID>` in the trust policy before use.
 - For the current dev-oriented infrastructure setup, NAT Gateway is removed from new environments.
 - For Google OAuth, make sure the callback URI includes:
   - `https://<your-domain>/api/auth/callback/google`
+- For Stripe billing, create a webhook endpoint in the Stripe Dashboard pointing to:
+  - `https://<your-domain>/api/stripe/webhook`
+  - Subscribed events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+  - Copy its signing secret into `STRIPE_WEBHOOK_SECRET`
 
 ## First-time setup flow
 

@@ -26,8 +26,10 @@ async function findOrCreateStripeCustomerId(userId: string, email: string | null
     metadata: { userId },
   });
 
-  await prisma.subscription.create({
-    data: { userId, stripeCustomerId: customer.id },
+  await prisma.subscription.upsert({
+    where: { userId },
+    create: { userId, stripeCustomerId: customer.id },
+    update: { stripeCustomerId: customer.id },
   });
 
   return customer.id;

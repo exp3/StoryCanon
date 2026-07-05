@@ -162,6 +162,8 @@ BOOTSTRAP="${BOOTSTRAP:-false}"
 RECREATE_SERVICE="${RECREATE_SERVICE:-false}"
 STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}"
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-}"
+STRIPE_PRICE_PLUS="${STRIPE_PRICE_PLUS:-}"
+STRIPE_PRICE_PRO="${STRIPE_PRICE_PRO:-}"
 
 if [[ -n "$NEXTAUTH_URL_INPUT" ]]; then
   RESOLVED_NEXTAUTH_URL="$NEXTAUTH_URL_INPUT"
@@ -382,7 +384,9 @@ render_json "$PRIMARY_CONTAINER_FILE" <<JSON
     { "name": "PAYMENT_MODE", "value": "${PAYMENT_MODE}" },
     { "name": "DATABASE_HOST", "value": "${DATABASE_ENDPOINT}" },
     { "name": "DATABASE_PORT", "value": "5432" },
-    { "name": "EXPORT_BUCKET_NAME", "value": "${EXPORT_BUCKET_NAME}" }
+    { "name": "EXPORT_BUCKET_NAME", "value": "${EXPORT_BUCKET_NAME}" },
+    { "name": "STRIPE_PRICE_PLUS", "value": "${STRIPE_PRICE_PLUS}" },
+    { "name": "STRIPE_PRICE_PRO", "value": "${STRIPE_PRICE_PRO}" }
   ],
   "secrets": [
     { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/DATABASE_URL" },
@@ -390,7 +394,9 @@ render_json "$PRIMARY_CONTAINER_FILE" <<JSON
     { "name": "NEXTAUTH_SECRET", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/NEXTAUTH_SECRET" },
     { "name": "GOOGLE_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/GOOGLE_CLIENT_ID" },
     { "name": "GOOGLE_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/GOOGLE_CLIENT_SECRET" },
-    { "name": "APP_API_TOKEN_PEPPER", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/APP_API_TOKEN_PEPPER" }
+    { "name": "APP_API_TOKEN_PEPPER", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/APP_API_TOKEN_PEPPER" },
+    { "name": "STRIPE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/STRIPE_SECRET_KEY" },
+    { "name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:${REGION}:${AWS_ACCOUNT_ID}:secret:${PREFIX}/STRIPE_WEBHOOK_SECRET" }
   ]
 }
 JSON
