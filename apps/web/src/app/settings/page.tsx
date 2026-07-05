@@ -47,6 +47,7 @@ export default async function SettingsPage({
           {billing === "success" && t.billingSuccess}
           {billing === "cancelled" && t.billingCancelled}
           {billing === "no-customer" && t.billingNoCustomer}
+          {billing === "not-configured" && t.billingNotConfigured}
         </div>
       ) : null}
 

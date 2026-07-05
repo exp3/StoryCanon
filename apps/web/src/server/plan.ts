@@ -31,14 +31,14 @@ export const PLAN_LIMITS = {
     storySnapshotsPerProject: 100,
   },
   PRO: {
-    projects: null,
-    charactersPerProject: null,
-    bodyCharsPerProject: null,
-    worldNotesPerProject: null,
-    foreshadowingsPerProject: null,
-    plotThreadsPerProject: null,
-    revisionTodosPerProject: null,
-    storySnapshotsPerProject: null,
+    projects: 500,
+    charactersPerProject: 200,
+    bodyCharsPerProject: 1000000,
+    worldNotesPerProject: 2000,
+    foreshadowingsPerProject: 1000,
+    plotThreadsPerProject: 1000,
+    revisionTodosPerProject: 3000,
+    storySnapshotsPerProject: 1000,
   },
 } as const;
 

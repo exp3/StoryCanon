@@ -42,9 +42,13 @@ export async function createCheckoutSession(formData: FormData) {
     throw new Error("Invalid plan.");
   }
 
+  if (!process.env.STRIPE_SECRET_KEY) {
+    redirect("/settings?billing=not-configured");
+  }
+
   const priceId = PLAN_PRICE_IDS[plan as PaidPlan];
   if (!priceId) {
-    throw new Error(`STRIPE_PRICE_${plan} is not configured.`);
+    redirect("/settings?billing=not-configured");
   }
 
   const customerId = await findOrCreateStripeCustomerId(user.id, user.email);
@@ -67,6 +71,11 @@ export async function createCheckoutSession(formData: FormData) {
 
 export async function createBillingPortalSession() {
   const user = await requireSessionUser("/settings");
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    redirect("/settings?billing=not-configured");
+  }
+
   const existing = await prisma.subscription.findFirst({
     where: { userId: user.id, stripeCustomerId: { not: null } },
     orderBy: { updatedAt: "desc" },

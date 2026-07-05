@@ -228,6 +228,7 @@ const en = {
     billingSuccess: "Subscription updated. It may take a moment to reflect.",
     billingCancelled: "Checkout was cancelled.",
     billingNoCustomer: "Subscribe to a paid plan first to manage billing.",
+    billingNotConfigured: "Billing is not set up yet. Please try again later.",
   },
   onboarding: {
     title: "Welcome to StoryCanon",
@@ -457,6 +458,7 @@ const ja: typeof en = {
     billingSuccess: "サブスクリプションを更新しました。反映まで少し時間がかかる場合があります。",
     billingCancelled: "チェックアウトはキャンセルされました。",
     billingNoCustomer: "請求情報を管理するには、まず有料プランに登録してください。",
+    billingNotConfigured: "課金機能は準備中です。しばらくしてから再度お試しください。",
   },
   onboarding: {
     title: "StoryCanonへようこそ",
