@@ -1,18 +1,20 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createCharacterSchema } from "@/server/validation";
 
 export default async function NewCharacterPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
   const { projectId } = await params;
+  const t = getDictionary(user.locale).characterNew;
 
   const project = await prisma.project.findFirst({ where: { id: projectId, userId: user.id, deletedAt: null } });
   if (!project) notFound();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 text-3xl font-semibold">新規キャラクター</h1>
+      <h1 className="mb-6 text-3xl font-semibold">{t.title}</h1>
       <form
         className="space-y-4 rounded border bg-white p-6"
         action={async (formData) => {
@@ -40,47 +42,47 @@ export default async function NewCharacterPage({ params }: { params: Promise<{ p
         }}
       >
         <label className="block">
-          <span className="text-sm font-medium">名前</span>
+          <span className="text-sm font-medium">{t.labelName}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="name" required />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">役割</span>
+          <span className="text-sm font-medium">{t.labelRole}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="role" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">年齢</span>
+          <span className="text-sm font-medium">{t.labelAge}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="age" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">性格</span>
+          <span className="text-sm font-medium">{t.labelPersonality}</span>
           <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="personality" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">話し方</span>
+          <span className="text-sm font-medium">{t.labelSpeechStyle}</span>
           <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="speechStyle" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">外見</span>
+          <span className="text-sm font-medium">{t.labelAppearance}</span>
           <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="appearance" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">背景</span>
+          <span className="text-sm font-medium">{t.labelBackground}</span>
           <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name="background" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">目的</span>
+          <span className="text-sm font-medium">{t.labelGoal}</span>
           <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="goal" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">秘密</span>
+          <span className="text-sm font-medium">{t.labelSecret}</span>
           <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="secret" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">現在の状態</span>
+          <span className="text-sm font-medium">{t.labelCurrentState}</span>
           <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name="currentState" />
         </label>
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
-          保存
+          {t.save}
         </button>
       </form>
     </main>

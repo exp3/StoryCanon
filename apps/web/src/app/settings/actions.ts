@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { isLocale } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 
 export type CreateApiTokenState = {
@@ -15,7 +16,7 @@ export async function createApiToken(_prevState: CreateApiTokenState, formData: 
   const user = await requireSessionUser("/settings");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
-    return { error: "トークン名を入力してください。", token: null };
+    return { error: user.locale === "ja" ? "トークン名を入力してください。" : "Please enter a token name.", token: null };
   }
 
   const raw = randomBytes(24).toString("base64url");
@@ -37,5 +38,13 @@ export async function revokeApiToken(formData: FormData) {
     where: { id, userId: user.id, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  revalidatePath("/settings");
+}
+
+export async function updateLocale(formData: FormData) {
+  const user = await requireSessionUser("/settings");
+  const requested = String(formData.get("locale") ?? "");
+  const locale = isLocale(requested) ? requested : user.locale;
+  await prisma.user.update({ where: { id: user.id }, data: { locale } });
   revalidatePath("/settings");
 }

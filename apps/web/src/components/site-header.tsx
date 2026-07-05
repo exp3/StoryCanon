@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
+import { getDictionary } from "@/lib/i18n";
 import { getSessionUser } from "@/server/session";
 
 export async function SiteHeader() {
   const user = await getSessionUser();
+  const t = getDictionary(user?.locale ?? "en").header;
 
   return (
     <header className="border-b border-[#dedbd2] bg-[#f7f7f4]">
@@ -14,16 +16,16 @@ export async function SiteHeader() {
           </Link>
           {user ? (
             <nav className="flex items-center gap-4 text-sm text-[#4b4b45]">
-              <Link href="/dashboard">ダッシュボード</Link>
-              <Link href="/projects">作品一覧</Link>
-              <Link href="/projects/new">新規作品</Link>
-              <Link href="/settings">設定</Link>
+              <Link href="/dashboard">{t.dashboard}</Link>
+              <Link href="/projects">{t.projects}</Link>
+              <Link href="/projects/new">{t.newProject}</Link>
+              <Link href="/settings">{t.settings}</Link>
             </nav>
           ) : null}
         </div>
         {user ? (
           <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-[#4b4b45] sm:inline">{user.name ?? user.email ?? "ログイン中"}</span>
+            <span className="hidden text-[#4b4b45] sm:inline">{user.name ?? user.email}</span>
             <form
               action={async () => {
                 "use server";
@@ -31,13 +33,13 @@ export async function SiteHeader() {
               }}
             >
               <button className="rounded border border-[#1d1d1b] px-3 py-2" type="submit">
-                ログアウト
+                {t.logout}
               </button>
             </form>
           </div>
         ) : (
           <Link className="rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white" href="/login">
-            ログイン
+            {t.login}
           </Link>
         )}
       </div>

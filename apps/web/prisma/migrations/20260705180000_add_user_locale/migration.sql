@@ -1,0 +1,2 @@
+ALTER TABLE "User" ADD COLUMN "locale" TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE "User" ADD COLUMN "onboardingCompletedAt" TIMESTAMP(3);

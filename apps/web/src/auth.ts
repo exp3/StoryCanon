@@ -20,6 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, user }) {
       if (session.user) {
         (session.user as { id?: string }).id = user.id;
+        (session.user as { locale?: string }).locale = (user as { locale?: string }).locale ?? "en";
+        (session.user as { onboardingCompletedAt?: Date | null }).onboardingCompletedAt = (
+          user as { onboardingCompletedAt?: Date | null }
+        ).onboardingCompletedAt ?? null;
       }
       return session;
     },

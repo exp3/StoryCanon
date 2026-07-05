@@ -1,15 +1,17 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getDictionary } from "@/lib/i18n";
 import { assertCanCreateProject } from "@/server/plan";
 import { requireSessionUser } from "@/server/session";
 import { createProjectSchema } from "@/server/validation";
 
 export default async function NewProjectPage() {
-  await requireSessionUser("/projects/new");
+  const user = await requireSessionUser("/projects/new");
+  const t = getDictionary(user.locale).projectNew;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 text-3xl font-semibold">新規作品</h1>
+      <h1 className="mb-6 text-3xl font-semibold">{t.title}</h1>
       <form
         className="space-y-4 rounded border bg-white p-6"
         action={async (formData) => {
@@ -40,23 +42,23 @@ export default async function NewProjectPage() {
         }}
       >
         <label className="block">
-          <span className="text-sm font-medium">タイトル</span>
+          <span className="text-sm font-medium">{t.labelTitle}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="title" required />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">ジャンル</span>
+          <span className="text-sm font-medium">{t.labelGenre}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="genre" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">作品の前提</span>
+          <span className="text-sm font-medium">{t.labelPremise}</span>
           <textarea className="mt-1 min-h-32 w-full rounded border px-3 py-2" name="premise" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">トーン</span>
+          <span className="text-sm font-medium">{t.labelTone}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="tone" />
         </label>
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
-          保存
+          {t.save}
         </button>
       </form>
     </main>

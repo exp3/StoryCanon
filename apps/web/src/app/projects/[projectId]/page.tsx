@@ -1,25 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getDictionary, localeTag, type Dictionary, type Locale } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 
-function tabsFor(projectId: string) {
+function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
   return [
-    { label: "概要", href: `/projects/${projectId}` },
-    { label: "シーン", href: `/projects/${projectId}#scenes` },
-    { label: "キャラクター", href: `/projects/${projectId}#characters` },
-    { label: "世界観", href: `/projects/${projectId}#world-notes` },
-    { label: "伏線", href: `/projects/${projectId}/foreshadowings` },
-    { label: "プロット", href: `/projects/${projectId}/plot-threads` },
-    { label: "TODO", href: `/projects/${projectId}/revision-todos` },
-    { label: "物語状態", href: `/projects/${projectId}/story-state` },
-    { label: "エクスポート", href: `/projects/${projectId}/export` },
+    { label: t.tabOverview, href: `/projects/${projectId}` },
+    { label: t.tabScenes, href: `/projects/${projectId}#scenes` },
+    { label: t.tabCharacters, href: `/projects/${projectId}#characters` },
+    { label: t.tabWorldNotes, href: `/projects/${projectId}#world-notes` },
+    { label: t.tabForeshadowings, href: `/projects/${projectId}/foreshadowings` },
+    { label: t.tabPlotThreads, href: `/projects/${projectId}/plot-threads` },
+    { label: t.tabRevisionTodos, href: `/projects/${projectId}/revision-todos` },
+    { label: t.tabStoryState, href: `/projects/${projectId}/story-state` },
+    { label: t.tabExport, href: `/projects/${projectId}/export` },
   ];
 }
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
   const { projectId } = await params;
+  const locale: Locale = user.locale;
+  const t = getDictionary(locale).projectDetail;
 
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId: user.id, deletedAt: null },
@@ -74,7 +77,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       </header>
 
       <nav className="mb-6 flex flex-wrap gap-2">
-        {tabsFor(project.id).map((tab) => (
+        {tabsFor(project.id, t).map((tab) => (
           <Link key={tab.label} className="rounded border bg-white px-3 py-2 text-sm" href={tab.href}>
             {tab.label}
           </Link>
@@ -85,16 +88,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-4">
           <section id="scenes" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-semibold">シーン一覧</h2>
+              <h2 className="font-semibold">{t.scenesHeading}</h2>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-[#666]">{project._count.scenes} 件</span>
+                <span className="text-sm text-[#666]">
+                  {project._count.scenes} {t.scenesUnit}
+                </span>
                 <Link className="rounded border px-3 py-1 text-sm" href={`/projects/${project.id}/scenes/new`}>
-                  + 新規シーン
+                  {t.newScene}
                 </Link>
               </div>
             </div>
             {project.scenes.length === 0 ? (
-              <p className="text-sm text-[#555]">まだシーンがありません。</p>
+              <p className="text-sm text-[#555]">{t.emptyScenes}</p>
             ) : (
               <ul className="space-y-3">
                 {project.scenes.map((scene) => (
@@ -104,7 +109,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         <p className="font-medium">{scene.title}</p>
                         {scene.summary ? <p className="mt-1 text-sm leading-6 text-[#555]">{scene.summary}</p> : null}
                       </div>
-                      <span className="shrink-0 text-xs text-[#666]">{scene.updatedAt.toLocaleString("ja-JP")}</span>
+                      <span className="shrink-0 text-xs text-[#666]">{scene.updatedAt.toLocaleString(localeTag(locale))}</span>
                     </Link>
                   </li>
                 ))}
@@ -114,16 +119,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
           <section id="characters" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-semibold">キャラクター</h2>
+              <h2 className="font-semibold">{t.charactersHeading}</h2>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-[#666]">{project._count.characters} 件</span>
+                <span className="text-sm text-[#666]">{project._count.characters}</span>
                 <Link className="rounded border px-3 py-1 text-sm" href={`/projects/${project.id}/characters/new`}>
-                  + 新規キャラクター
+                  {t.newCharacter}
                 </Link>
               </div>
             </div>
             {project.characters.length === 0 ? (
-              <p className="text-sm text-[#555]">まだキャラクターがありません。</p>
+              <p className="text-sm text-[#555]">{t.emptyCharacters}</p>
             ) : (
               <ul className="space-y-3">
                 {project.characters.map((character) => (
@@ -136,7 +141,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         <p className="font-medium">{character.name}</p>
                         {character.role ? <p className="mt-1 text-sm leading-6 text-[#555]">{character.role}</p> : null}
                       </div>
-                      <span className="shrink-0 text-xs text-[#666]">{character.updatedAt.toLocaleString("ja-JP")}</span>
+                      <span className="shrink-0 text-xs text-[#666]">
+                        {character.updatedAt.toLocaleString(localeTag(locale))}
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -146,16 +153,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
           <section id="world-notes" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-semibold">世界観ノート</h2>
+              <h2 className="font-semibold">{t.worldNotesHeading}</h2>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-[#666]">{project._count.worldNotes} 件</span>
+                <span className="text-sm text-[#666]">{project._count.worldNotes}</span>
                 <Link className="rounded border px-3 py-1 text-sm" href={`/projects/${project.id}/world-notes/new`}>
-                  + 新規世界観ノート
+                  {t.newWorldNote}
                 </Link>
               </div>
             </div>
             {project.worldNotes.length === 0 ? (
-              <p className="text-sm text-[#555]">まだ世界観ノートがありません。</p>
+              <p className="text-sm text-[#555]">{t.emptyWorldNotes}</p>
             ) : (
               <ul className="space-y-3">
                 {project.worldNotes.map((worldNote) => (
@@ -168,7 +175,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         <p className="font-medium">{worldNote.title}</p>
                         <p className="mt-1 text-sm leading-6 text-[#555]">{worldNote.category}</p>
                       </div>
-                      <span className="shrink-0 text-xs text-[#666]">{worldNote.updatedAt.toLocaleString("ja-JP")}</span>
+                      <span className="shrink-0 text-xs text-[#666]">
+                        {worldNote.updatedAt.toLocaleString(localeTag(locale))}
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -178,9 +187,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
           <section className="grid gap-4 md:grid-cols-3">
             {[
-              { label: "伏線", value: project._count.foreshadowings, href: `/projects/${project.id}/foreshadowings` },
-              { label: "プロットスレッド", value: project._count.plotThreads, href: `/projects/${project.id}/plot-threads` },
-              { label: "TODO", value: project._count.revisionTodos, href: `/projects/${project.id}/revision-todos` },
+              { label: t.statForeshadowings, value: project._count.foreshadowings, href: `/projects/${project.id}/foreshadowings` },
+              { label: t.statPlotThreads, value: project._count.plotThreads, href: `/projects/${project.id}/plot-threads` },
+              { label: t.statRevisionTodos, value: project._count.revisionTodos, href: `/projects/${project.id}/revision-todos` },
             ].map((item) => (
               <Link key={item.label} className="rounded border bg-white p-4" href={item.href}>
                 <p className="text-sm text-[#666]">{item.label}</p>
@@ -193,31 +202,39 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <aside className="space-y-4">
           <section className="rounded border bg-white p-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">最新の物語状態</h2>
+              <h2 className="font-semibold">{t.latestStoryStateHeading}</h2>
               <Link className="text-xs text-[#4b4b45] underline" href={`/projects/${project.id}/story-state`}>
-                履歴を見る
+                {t.viewHistory}
               </Link>
             </div>
             {latestStoryState ? (
               <div className="mt-3 space-y-3 text-sm leading-6 text-[#555]">
                 <p>{latestStoryState.summary}</p>
-                {latestStoryState.unresolvedProblems ? <p>未解決: {latestStoryState.unresolvedProblems}</p> : null}
-                {latestStoryState.nextOptions ? <p>次の選択肢: {latestStoryState.nextOptions}</p> : null}
-                <p className="text-xs text-[#666]">{latestStoryState.createdAt.toLocaleString("ja-JP")}</p>
+                {latestStoryState.unresolvedProblems ? (
+                  <p>
+                    {t.unresolvedLabel} {latestStoryState.unresolvedProblems}
+                  </p>
+                ) : null}
+                {latestStoryState.nextOptions ? (
+                  <p>
+                    {t.nextOptionsLabel} {latestStoryState.nextOptions}
+                  </p>
+                ) : null}
+                <p className="text-xs text-[#666]">{latestStoryState.createdAt.toLocaleString(localeTag(locale))}</p>
               </div>
             ) : (
-              <p className="mt-3 text-sm leading-6 text-[#555]">まだ Story State Snapshot が保存されていません。</p>
+              <p className="mt-3 text-sm leading-6 text-[#555]">{t.emptyStoryState}</p>
             )}
           </section>
 
           <section className="rounded border bg-white p-4">
-            <h2 className="font-semibold">次の操作</h2>
+            <h2 className="font-semibold">{t.nextActionsHeading}</h2>
             <div className="mt-3 flex flex-col gap-2 text-sm">
               <Link className="rounded border px-3 py-2 text-center" href="/projects">
-                作品一覧へ戻る
+                {t.backToProjects}
               </Link>
               <Link className="rounded border px-3 py-2 text-center" href="/projects/new">
-                別の作品を作成
+                {t.createAnotherProject}
               </Link>
             </div>
           </section>

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createCharacterSchema } from "@/server/validation";
 
@@ -11,6 +12,7 @@ export default async function CharacterDetailPage({
 }) {
   const user = await requireSessionUser();
   const { projectId, characterId } = await params;
+  const t = getDictionary(user.locale).characterDetail;
 
   const project = await prisma.project.findFirst({ where: { id: projectId, userId: user.id, deletedAt: null } });
   if (!project) notFound();
@@ -59,29 +61,29 @@ export default async function CharacterDetailPage({
   }
 
   const fields: Array<[string, keyof typeof character, boolean]> = [
-    ["役割", "role", false],
-    ["年齢", "age", false],
-    ["性格", "personality", true],
-    ["話し方", "speechStyle", true],
-    ["外見", "appearance", true],
-    ["背景", "background", true],
-    ["目的", "goal", true],
-    ["秘密", "secret", true],
-    ["現在の状態", "currentState", true],
+    [t.labelRole, "role", false],
+    [t.labelAge, "age", false],
+    [t.labelPersonality, "personality", true],
+    [t.labelSpeechStyle, "speechStyle", true],
+    [t.labelAppearance, "appearance", true],
+    [t.labelBackground, "background", true],
+    [t.labelGoal, "goal", true],
+    [t.labelSecret, "secret", true],
+    [t.labelCurrentState, "currentState", true],
   ];
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">キャラクター編集</h1>
+        <h1 className="text-3xl font-semibold">{t.title}</h1>
         <Link className="text-sm text-[#4b4b45] underline" href={`/projects/${projectId}`}>
-          作品詳細へ戻る
+          {t.backToProject}
         </Link>
       </div>
 
       <form className="space-y-4 rounded border bg-white p-6" action={updateCharacter}>
         <label className="block">
-          <span className="text-sm font-medium">名前</span>
+          <span className="text-sm font-medium">{t.labelName}</span>
           <input className="mt-1 w-full rounded border px-3 py-2" name="name" defaultValue={character.name} required />
         </label>
         {fields.map(([label, key, multiline]) =>
@@ -106,14 +108,14 @@ export default async function CharacterDetailPage({
           )
         )}
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
-          保存
+          {t.save}
         </button>
       </form>
 
       <section className="mt-6 rounded border bg-white p-6">
-        <h2 className="mb-3 font-semibold">キャラクターメモ</h2>
+        <h2 className="mb-3 font-semibold">{t.notesHeading}</h2>
         {notes.length === 0 ? (
-          <p className="text-sm text-[#555]">まだメモがありません。</p>
+          <p className="text-sm text-[#555]">{t.notesEmpty}</p>
         ) : (
           <ul className="space-y-3">
             {notes.map((note) => (
@@ -128,7 +130,7 @@ export default async function CharacterDetailPage({
 
       <form className="mt-4" action={deleteCharacter}>
         <button className="rounded border border-red-600 px-4 py-2 text-sm text-red-600" type="submit">
-          このキャラクターを削除
+          {t.delete}
         </button>
       </form>
     </main>

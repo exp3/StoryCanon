@@ -15,11 +15,12 @@ export default async function HomePage() {
           <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#46605a]">Private story memory</p>
           <h1 className="max-w-3xl text-5xl font-semibold leading-tight">StoryCanon</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[#4b4b45]">
-            ChatGPT で生まれた本文、キャラクター、世界観、伏線、TODO、現在の物語状態を、作品ごとの非公開ワークスペースに保存します。
+            Save the body text, characters, world notes, foreshadowing, TODOs, and current story state generated in
+            ChatGPT into a private workspace for each project.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link className="rounded bg-[#1d1d1b] px-5 py-3 text-white" href="/login">
-              ログインして始める
+              Log in to get started
             </Link>
           </div>
         </div>
@@ -30,9 +31,9 @@ export default async function HomePage() {
               <span className="rounded bg-[#e4eee8] px-2 py-1 text-xs text-[#315247]">saved</span>
             </div>
             <div className="space-y-3 text-sm leading-6 text-[#4b4b45]">
-              <p>主人公の目的、対立、未回収の要素を作品単位で追跡できます。</p>
-              <p>未解決 TODO や伏線の状態をまとめて見返し、次の執筆判断につなげられます。</p>
-              <p>生成シーンの保存先を一本化し、あとから MCP 経由の更新やロールバックも扱えます。</p>
+              <p>Track the protagonist&apos;s goals, conflicts, and unresolved threads per project.</p>
+              <p>Review open TODOs and foreshadowing status together to decide what to write next.</p>
+              <p>Keep generated scenes in one place, with updates and rollback available via MCP later.</p>
             </div>
           </div>
         </div>
