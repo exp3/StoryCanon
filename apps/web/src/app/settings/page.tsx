@@ -4,15 +4,29 @@ import { CopyButton } from "@/components/copy-button";
 import { getDictionary, localeTag } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { revokeApiToken, updateLocale } from "./actions";
+import { createBillingPortalSession, createCheckoutSession } from "./billing-actions";
 import { CreateTokenForm } from "./token-form";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string }>;
+}) {
   const user = await requireSessionUser("/settings");
   const t = getDictionary(user.locale).settings;
+  const { billing } = await searchParams;
   const tokens = await prisma.apiToken.findMany({
     where: { userId: user.id, deletedAt: null },
     orderBy: { createdAt: "desc" },
   });
+  const subscription = await prisma.subscription.findFirst({
+    where: { userId: user.id },
+    orderBy: { updatedAt: "desc" },
+  });
+  const plan = subscription && ["ACTIVE", "TRIALING"].includes(subscription.status) ? subscription.plan : "FREE";
+  const planLabel = { FREE: t.planFree, PLUS: t.planPlus, PRO: t.planPro }[plan];
+  const statusSuffix =
+    subscription?.status === "PAST_DUE" ? ` ${t.statusPastDue}` : subscription?.status === "CANCELED" ? ` ${t.statusCanceled}` : "";
 
   const headerList = await headers();
   const host = headerList.get("host");
@@ -27,6 +41,47 @@ export default async function SettingsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <h1 className="mb-6 text-3xl font-semibold">{t.title}</h1>
+
+      {billing ? (
+        <div className="mb-6 rounded border border-[#dedbd2] bg-[#f7f7f4] p-4 text-sm text-[#4b4b45]">
+          {billing === "success" && t.billingSuccess}
+          {billing === "cancelled" && t.billingCancelled}
+          {billing === "no-customer" && t.billingNoCustomer}
+        </div>
+      ) : null}
+
+      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
+        <h2 className="mb-3 text-xl font-semibold">{t.billingHeading}</h2>
+        <p className="mb-4 text-sm leading-6 text-[#4b4b45]">
+          {t.currentPlanLabel}: <span className="font-medium text-[#1d1d1b]">{planLabel}</span>
+          {statusSuffix}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          {plan !== "PLUS" && plan !== "PRO" ? (
+            <form action={createCheckoutSession}>
+              <input type="hidden" name="plan" value="PLUS" />
+              <button className="rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white" type="submit">
+                {t.upgradeToPlus}
+              </button>
+            </form>
+          ) : null}
+          {plan !== "PRO" ? (
+            <form action={createCheckoutSession}>
+              <input type="hidden" name="plan" value="PRO" />
+              <button className="rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white" type="submit">
+                {t.upgradeToPro}
+              </button>
+            </form>
+          ) : null}
+          {subscription?.stripeCustomerId ? (
+            <form action={createBillingPortalSession}>
+              <button className="rounded border border-[#dedbd2] px-4 py-2 text-sm text-[#1d1d1b]" type="submit">
+                {t.manageBilling}
+              </button>
+            </form>
+          ) : null}
+        </div>
+      </section>
 
       <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
         <h2 className="mb-3 text-xl font-semibold">{t.languageHeading}</h2>
