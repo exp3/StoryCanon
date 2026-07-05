@@ -17,6 +17,7 @@ export async function SiteHeader() {
               <Link href="/dashboard">ダッシュボード</Link>
               <Link href="/projects">作品一覧</Link>
               <Link href="/projects/new">新規作品</Link>
+              <Link href="/settings">設定</Link>
             </nav>
           ) : null}
         </div>
