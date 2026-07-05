@@ -3,7 +3,19 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSessionUser } from "@/server/session";
 
-const tabs = ["概要", "シーン", "キャラクター", "世界観", "伏線", "プロット", "TODO", "物語状態", "エクスポート"];
+function tabsFor(projectId: string) {
+  return [
+    { label: "概要", href: `/projects/${projectId}` },
+    { label: "シーン", href: `/projects/${projectId}#scenes` },
+    { label: "キャラクター", href: `/projects/${projectId}#characters` },
+    { label: "世界観", href: `/projects/${projectId}#world-notes` },
+    { label: "伏線", href: `/projects/${projectId}/foreshadowings` },
+    { label: "プロット", href: `/projects/${projectId}/plot-threads` },
+    { label: "TODO", href: `/projects/${projectId}/revision-todos` },
+    { label: "物語状態", href: `/projects/${projectId}/story-state` },
+    { label: "エクスポート", href: `/projects/${projectId}/export` },
+  ];
+}
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
@@ -62,16 +74,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       </header>
 
       <nav className="mb-6 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <button key={tab} className="rounded border bg-white px-3 py-2 text-sm" type="button">
-            {tab}
-          </button>
+        {tabsFor(project.id).map((tab) => (
+          <Link key={tab.label} className="rounded border bg-white px-3 py-2 text-sm" href={tab.href}>
+            {tab.label}
+          </Link>
         ))}
       </nav>
 
       <section className="grid gap-4 md:grid-cols-[1fr_320px]">
         <div className="space-y-4">
-          <section className="rounded border bg-white p-4">
+          <section id="scenes" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">シーン一覧</h2>
               <div className="flex items-center gap-3">
@@ -100,7 +112,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
           </section>
 
-          <section className="rounded border bg-white p-4">
+          <section id="characters" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">キャラクター</h2>
               <div className="flex items-center gap-3">
@@ -132,7 +144,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
           </section>
 
-          <section className="rounded border bg-white p-4">
+          <section id="world-notes" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">世界観ノート</h2>
               <div className="flex items-center gap-3">
@@ -166,21 +178,26 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
           <section className="grid gap-4 md:grid-cols-3">
             {[
-              { label: "伏線", value: project._count.foreshadowings },
-              { label: "プロットスレッド", value: project._count.plotThreads },
-              { label: "TODO", value: project._count.revisionTodos },
+              { label: "伏線", value: project._count.foreshadowings, href: `/projects/${project.id}/foreshadowings` },
+              { label: "プロットスレッド", value: project._count.plotThreads, href: `/projects/${project.id}/plot-threads` },
+              { label: "TODO", value: project._count.revisionTodos, href: `/projects/${project.id}/revision-todos` },
             ].map((item) => (
-              <div key={item.label} className="rounded border bg-white p-4">
+              <Link key={item.label} className="rounded border bg-white p-4" href={item.href}>
                 <p className="text-sm text-[#666]">{item.label}</p>
                 <p className="mt-3 text-2xl font-semibold">{item.value}</p>
-              </div>
+              </Link>
             ))}
           </section>
         </div>
 
         <aside className="space-y-4">
           <section className="rounded border bg-white p-4">
-            <h2 className="font-semibold">最新の物語状態</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">最新の物語状態</h2>
+              <Link className="text-xs text-[#4b4b45] underline" href={`/projects/${project.id}/story-state`}>
+                履歴を見る
+              </Link>
+            </div>
             {latestStoryState ? (
               <div className="mt-3 space-y-3 text-sm leading-6 text-[#555]">
                 <p>{latestStoryState.summary}</p>
