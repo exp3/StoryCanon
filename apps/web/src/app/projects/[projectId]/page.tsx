@@ -7,6 +7,7 @@ import { requireSessionUser } from "@/server/session";
 function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
   return [
     { label: t.tabOverview, href: `/projects/${projectId}` },
+    { label: t.tabRead, href: `/projects/${projectId}/read` },
     { label: t.tabScenes, href: `/projects/${projectId}#scenes` },
     { label: t.tabCharacters, href: `/projects/${projectId}#characters` },
     { label: t.tabWorldNotes, href: `/projects/${projectId}#world-notes` },

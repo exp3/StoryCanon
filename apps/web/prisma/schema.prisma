@@ -107,6 +107,7 @@ model User {
   projects              Project[]
   auditLogs             AuditLog[]
   mutationLogs          MutationLog[]
+  readingProgress       ReadingProgress[]
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 }
@@ -198,6 +199,7 @@ model Project {
   storyStateSnapshots StoryStateSnapshot[]
   exportJobs         ExportJob[]
   mutationLogs       MutationLog[]
+  readingProgress    ReadingProgress[]
 
   @@index([userId, updatedAt])
   @@index([userId, deletedAt])
@@ -419,4 +421,19 @@ model MutationLog {
   @@index([transactionId, createdAt])
   @@index([userId, projectId, createdAt])
   @@index([targetType, targetId, createdAt])
+}
+
+model ReadingProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  projectId   String
+  sceneId     String?
+  scrollRatio Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId, updatedAt])
 }

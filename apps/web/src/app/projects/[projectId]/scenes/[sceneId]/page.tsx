@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createSceneSchema } from "@/server/validation";
+import { IndentTextarea } from "@/components/indent-textarea";
 
 export default async function SceneDetailPage({
   params,
@@ -89,11 +90,13 @@ export default async function SceneDetailPage({
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelBody}</span>
-          <textarea
-            className="mt-1 min-h-64 w-full rounded border px-3 py-2 font-mono text-sm"
+          <IndentTextarea
             name="body"
             defaultValue={scene.body}
             required
+            className="mt-1 min-h-64 w-full rounded border px-3 py-2 text-sm leading-7"
+            formatLabel={t.indentFormat}
+            hint={t.indentHint}
           />
         </label>
         <div className="flex items-center justify-between">
