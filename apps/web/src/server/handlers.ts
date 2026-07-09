@@ -389,6 +389,26 @@ export async function handleWebApi(method: string, path: string[], actor: Curren
           return json({ storyStateSnapshot: record, commandId: undoToken }, { status: 201 });
         }
       }
+      if (collection === "reading-progress") {
+        if (method === "GET") {
+          return json({
+            readingProgress: await prisma.readingProgress.findUnique({
+              where: { userId_projectId: { userId: actor.userId, projectId } },
+            }),
+          });
+        }
+        if (method === "POST" || method === "PATCH") {
+          const sceneId = typeof body.sceneId === "string" && body.sceneId ? body.sceneId : null;
+          const rawRatio = typeof body.scrollRatio === "number" ? body.scrollRatio : 0;
+          const scrollRatio = Number.isFinite(rawRatio) ? Math.min(1, Math.max(0, rawRatio)) : 0;
+          const readingProgress = await prisma.readingProgress.upsert({
+            where: { userId_projectId: { userId: actor.userId, projectId } },
+            create: { userId: actor.userId, projectId, sceneId, scrollRatio },
+            update: { sceneId, scrollRatio },
+          });
+          return json({ readingProgress });
+        }
+      }
       if (collection === "story-state" && path[3] === "latest" && method === "GET") {
         return json({ latestStoryState: await prisma.storyStateSnapshot.findFirst({ where: { projectId, deletedAt: null }, orderBy: { createdAt: "desc" } }) });
       }

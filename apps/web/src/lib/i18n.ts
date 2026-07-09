@@ -44,6 +44,7 @@ const en = {
   },
   projectDetail: {
     tabOverview: "Overview",
+    tabRead: "Read",
     tabScenes: "Scenes",
     tabCharacters: "Characters",
     tabWorldNotes: "World",
@@ -82,6 +83,8 @@ const en = {
     labelSummary: "Summary (optional)",
     labelBody: "Body",
     save: "Save",
+    indentFormat: "Fix indentation",
+    indentHint: "Press Enter to auto-indent the next paragraph.",
   },
   sceneDetail: {
     title: "Edit Scene",
@@ -93,6 +96,15 @@ const en = {
     labelBody: "Body",
     save: "Save",
     delete: "Delete this scene",
+    indentFormat: "Fix indentation",
+    indentHint: "Press Enter to auto-indent the next paragraph.",
+  },
+  reader: {
+    title: "Read",
+    backToProject: "Back to Project",
+    empty: "No scenes to read yet.",
+    autoSaved: "Progress saved",
+    resumed: "Resumed where you left off",
   },
   characterNew: {
     title: "New Character",
@@ -275,6 +287,7 @@ const ja: typeof en = {
   },
   projectDetail: {
     tabOverview: "概要",
+    tabRead: "読む",
     tabScenes: "シーン",
     tabCharacters: "キャラクター",
     tabWorldNotes: "世界観",
@@ -313,6 +326,8 @@ const ja: typeof en = {
     labelSummary: "要約(任意)",
     labelBody: "本文",
     save: "保存",
+    indentFormat: "字下げを揃える",
+    indentHint: "Enterで次の段落に自動で字下げが入ります。",
   },
   sceneDetail: {
     title: "シーン編集",
@@ -324,6 +339,15 @@ const ja: typeof en = {
     labelBody: "本文",
     save: "保存",
     delete: "このシーンを削除",
+    indentFormat: "字下げを揃える",
+    indentHint: "Enterで次の段落に自動で字下げが入ります。",
+  },
+  reader: {
+    title: "読む",
+    backToProject: "作品詳細へ戻る",
+    empty: "まだ読めるシーンがありません。",
+    autoSaved: "読んだ位置を保存しました",
+    resumed: "前回の続きから表示しています",
   },
   characterNew: {
     title: "新規キャラクター",

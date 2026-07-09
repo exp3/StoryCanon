@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createSceneSchema } from "@/server/validation";
+import { IndentTextarea } from "@/components/indent-textarea";
 
 export default async function NewScenePage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
@@ -70,7 +71,13 @@ export default async function NewScenePage({ params }: { params: Promise<{ proje
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelBody}</span>
-          <textarea className="mt-1 min-h-64 w-full rounded border px-3 py-2 font-mono text-sm" name="body" required />
+          <IndentTextarea
+            name="body"
+            required
+            className="mt-1 min-h-64 w-full rounded border px-3 py-2 text-sm leading-7"
+            formatLabel={t.indentFormat}
+            hint={t.indentHint}
+          />
         </label>
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
           {t.save}
