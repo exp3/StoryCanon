@@ -21,6 +21,7 @@ export class SecretsStack extends cdk.Stack {
       "STRIPE_SECRET_KEY",
       "STRIPE_WEBHOOK_SECRET",
       "APP_API_TOKEN_PEPPER",
+      "CLOUDFLARE_TUNNEL_TOKEN",
     ];
 
     this.appSecrets = Object.fromEntries(

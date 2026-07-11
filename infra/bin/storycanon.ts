@@ -5,6 +5,7 @@ import { DatabaseStack } from "../lib/database-stack";
 import { StorageStack } from "../lib/storage-stack";
 import { SecretsStack } from "../lib/secrets-stack";
 import { AppRunnerStack } from "../lib/app-runner-stack";
+import { ComputeStack } from "../lib/compute-stack";
 import { DnsStack } from "../lib/dns-stack";
 
 const app = new cdk.App();
@@ -34,6 +35,22 @@ const appRunner = new AppRunnerStack(app, `${prefix}-app`, {
   storage,
   secrets,
   useExistingEcrRepository,
+});
+
+// Hybrid runtime target: a single in-VPC EC2 running the web container plus a
+// Cloudflare Tunnel, keeping RDS (and its managed automated backups). Deploy
+// with scripts/deploy-hybrid.ps1; the legacy `${prefix}-app` App Runner stack
+// is not deployed in this topology.
+const instanceType = app.node.tryGetContext("instanceType") ?? process.env.EC2_INSTANCE_TYPE ?? "t3.small";
+new ComputeStack(app, `${prefix}-compute`, {
+  env,
+  prefix,
+  vpc: network.vpc,
+  appSecurityGroup: network.appSecurityGroup,
+  database,
+  storage,
+  secrets,
+  instanceType,
 });
 
 const hostedZoneName = app.node.tryGetContext("hostedZoneName") ?? process.env.HOSTED_ZONE_NAME;

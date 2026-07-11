@@ -69,6 +69,7 @@ try {
   $StackNames = @(
     "$Prefix-dns",
     "$Prefix-app",
+    "$Prefix-compute",
     "$Prefix-database",
     "$Prefix-storage",
     "$Prefix-secrets",

@@ -127,6 +127,68 @@ For local or separately managed environments, migrations can still be run manual
 npm run prisma:deploy -w apps/web
 ```
 
+## Hybrid runtime (EC2 + RDS + Cloudflare Tunnel)
+
+This is the low-cost PoC topology: keep the CDK network and RDS (so RDS managed
+automated backups are retained), but drop the managed load balancer and Fargate.
+The web container and a Cloudflare Tunnel (`cloudflared`) run via docker compose
+on a single in-VPC EC2 host. Ingress arrives through the outbound-only tunnel, so
+the instance needs no inbound port, load balancer or public ingress IP.
+
+Stacks deployed: `-network`, `-storage`, `-secrets`, `-database`, `-compute`
+(the [ComputeStack](../infra/lib/compute-stack.ts)). The legacy `-app`
+(App Runner) stack is not used in this topology.
+
+Prerequisites:
+
+- A Cloudflare Tunnel created in Cloudflare Zero Trust, with its public hostname
+  routed to `http://<instance-private-ip-or-web>:3000`. Copy the tunnel token.
+- Google OAuth redirect URI for the final URL: `https://<app-domain>/api/auth/callback/google`.
+
+```powershell
+$env:GOOGLE_CLIENT_ID = "<google-oauth-client-id>"
+$env:GOOGLE_CLIENT_SECRET = "<google-oauth-client-secret>"
+$env:CLOUDFLARE_TUNNEL_TOKEN = "<cloudflare-tunnel-token>"
+
+.\scripts\deploy-hybrid.ps1 `
+  -Stage dev `
+  -Region ap-northeast-1 `
+  -AwsAccountId "<account-id>" `
+  -Profile "<aws-profile>" `
+  -AppDomainName "storycanon.example.com" `
+  -ConfirmCreate "create-storycanon-dev"
+```
+
+Add `-Bootstrap` on the first deploy in a fresh account/region.
+
+The script deploys the stacks, writes application secrets (including
+`DATABASE_URL` derived from RDS and the Cloudflare tunnel token), builds and
+pushes the `linux/amd64` image to ECR, then rolls out on the instance via SSM
+(`AWS-RunShellScript`, no SSH). On the instance it renders
+`/opt/storycanon/docker-compose.yml` from [deploy/docker-compose.yml](../deploy/docker-compose.yml)
+and generates a sibling `.env` by reading Secrets Manager locally, so secret
+values never travel through the SSM payload. Prisma migrations run automatically
+on container startup against the private RDS endpoint.
+
+Redeploy a new image without touching infrastructure:
+
+```powershell
+.\scripts\deploy-hybrid.ps1 -Stage dev -Region ap-northeast-1 `
+  -AwsAccountId "<account-id>" -Profile "<aws-profile>" `
+  -AppDomainName "storycanon.example.com" -ConfirmCreate "create-storycanon-dev" `
+  -SkipInfra
+```
+
+Notes:
+
+- The EC2 host is x86_64 (default `t3.small`); the image is built `--platform
+  linux/amd64` to match. Override the size with `-c instanceType=<type>` at
+  synth/deploy or `EC2_INSTANCE_TYPE`; if you pick a Graviton (`t4g.*`) type,
+  build an arm64 image too.
+- No compute HA: a reboot or redeploy causes brief downtime. Durable data lives
+  in RDS with its automated backups.
+- Teardown uses the same `delete-aws-dev.ps1` (it now destroys `-compute`).
+
 ## Stop dev runtime
 
 Use this when you want to pause the runtime after a short test but keep the CloudFormation stacks and data.

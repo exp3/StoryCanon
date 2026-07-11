@@ -1,0 +1,34 @@
+# StoryCanon hybrid runtime (single EC2 in the VPC).
+#
+# This file is the source of truth. scripts/deploy-hybrid.ps1 copies it to the
+# instance at /opt/storycanon/docker-compose.yml and generates a sibling .env
+# (assembled from AWS Secrets Manager on the instance). docker compose reads
+# .env in the project dir for both ${VAR} interpolation below and web's env_file.
+#
+# web:         the existing apps/web image (runs `prisma migrate deploy` on start).
+# cloudflared: outbound-only Cloudflare Tunnel; publishes web without any inbound
+#              port, load balancer or public IP for ingress.
+services:
+  web:
+    image: ${IMAGE_URI}
+    env_file:
+      - .env
+    restart: unless-stopped
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
