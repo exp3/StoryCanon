@@ -35,6 +35,8 @@ jobs:
       APP_API_TOKEN_PEPPER: ${{ secrets.APP_API_TOKEN_PEPPER }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_PRICE_PLUS: ${{ vars.STRIPE_PRICE_PLUS }}
+      STRIPE_PRICE_PRO: ${{ vars.STRIPE_PRICE_PRO }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

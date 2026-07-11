@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="StoryCanonは、ChatGPTと一緒につくる物語の本文・登場人物・伏線・世界観を、作品ごとに静かに整理するプライベートな創作記録アプリです。"
+    />
+    <title>StoryCanon | 物語のための、静かな記憶庫</title>
+    <style>
+      :root {
+        --paper: #f7f7f4;
+        --surface: #ffffff;
+        --ink: #1d1d1b;
+        --muted: #5d5d57;
+        --line: #dedbd2;
+        --sage: #46605a;
+        --sage-soft: #e4eee8;
+        --warm: #f0eee7;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", YuGothic, "Noto Sans JP", sans-serif;
+        line-height: 1.8;
+      }
+      a { color: inherit; text-decoration: none; }
+      .wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
+      .header { border-bottom: 1px solid var(--line); }
+      .nav { min-height: 73px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+      .brand { font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+      .nav-links { display: flex; align-items: center; gap: 26px; font-size: 14px; color: var(--muted); }
+      .button { display: inline-flex; justify-content: center; align-items: center; min-height: 46px; padding: 10px 18px; border: 1px solid var(--ink); border-radius: 4px; font-size: 14px; font-weight: 700; transition: .2s ease; }
+      .button:hover { transform: translateY(-1px); }
+      .button-primary { background: var(--ink); color: #fff; }
+      .button-secondary { background: transparent; }
+      .eyebrow { margin: 0 0 16px; color: var(--sage); font-size: 12px; letter-spacing: .12em; font-weight: 700; text-transform: uppercase; }
+      .hero { padding: 112px 0 96px; }
+      .hero-grid { display: grid; grid-template-columns: 1.04fr .96fr; align-items: center; gap: 72px; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { max-width: 700px; margin-bottom: 25px; font-size: clamp(40px, 5vw, 64px); letter-spacing: -.055em; line-height: 1.25; }
+      h2 { margin-bottom: 18px; font-size: clamp(28px, 3.5vw, 42px); letter-spacing: -.04em; line-height: 1.4; }
+      h3 { margin-bottom: 8px; font-size: 17px; line-height: 1.5; }
+      .lead { max-width: 620px; color: var(--muted); font-size: 18px; line-height: 2; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+      .note { margin-top: 15px; color: #74746e; font-size: 12px; }
+      .app-card { border: 1px solid var(--line); background: var(--surface); box-shadow: 0 14px 34px rgba(38, 37, 31, .06); }
+      .app-top { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 13px; }
+      .app-badge { padding: 3px 8px; border-radius: 3px; background: var(--sage-soft); color: #315247; font-size: 11px; font-weight: 700; }
+      .app-content { padding: 22px 20px; }
+      .tabs { display: flex; gap: 12px; overflow: hidden; padding-bottom: 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; white-space: nowrap; }
+      .tabs span:first-child { color: var(--ink); font-weight: 700; }
+      .state { margin-top: 18px; padding: 16px; background: #fafaf8; border: 1px solid #ebe9e2; }
+      .state-title { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 13px; font-weight: 700; }
+      .state p { margin-bottom: 8px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+      .state p:last-child { margin-bottom: 0; }
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
+      .stat { border: 1px solid var(--line); padding: 10px; }
+      .stat span { display: block; color: var(--muted); font-size: 10px; }
+      .stat strong { font-size: 20px; }
+      section { border-top: 1px solid var(--line); }
+      .section { padding: 104px 0; }
+      .section-intro { max-width: 660px; margin-bottom: 52px; }
+      .section-intro p { color: var(--muted); }
+      .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      .feature { min-height: 215px; padding: 26px; border: 1px solid var(--line); background: rgba(255,255,255,.52); }
+      .feature-number { display: block; margin-bottom: 34px; color: var(--sage); font-size: 12px; font-weight: 700; letter-spacing: .1em; }
+      .feature p { margin-bottom: 0; color: var(--muted); font-size: 14px; }
+      .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: step; }
+      .flow-item { position: relative; padding: 25px 22px 22px; border: 1px solid var(--line); background: var(--surface); }
+      .flow-item::before { display: block; margin-bottom: 18px; color: var(--sage); content: "0" counter(step); counter-increment: step; font-size: 13px; font-weight: 700; letter-spacing: .1em; }
+      .flow-item p { margin-bottom: 0; color: var(--muted); font-size: 14px; }
+      .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
+      .plan { display: flex; min-height: 420px; flex-direction: column; padding: 28px 26px; border: 1px solid var(--line); background: rgba(255,255,255,.52); }
+      .plan-featured { border-color: var(--sage); background: var(--surface); box-shadow: 0 14px 34px rgba(38, 37, 31, .05); }
+      .plan-label { min-height: 22px; margin-bottom: 10px; color: var(--sage); font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+      .plan h3 { font-size: 23px; }
+      .price { margin: 8px 0 6px; font-size: 32px; font-weight: 700; letter-spacing: -.04em; line-height: 1.3; }
+      .price small { color: var(--muted); font-size: 13px; font-weight: 400; letter-spacing: 0; }
+      .annual { min-height: 26px; margin: 0 0 22px; color: var(--muted); font-size: 12px; }
+      .plan ul { margin: 0 0 24px; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+      .plan li { padding: 8px 0; border-top: 1px solid #ebe9e2; }
+      .plan .button { margin-top: auto; }
+      .quiet { background: var(--warm); }
+      .quiet-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 72px; align-items: start; }
+      .list { margin: 0; padding: 0; list-style: none; border-top: 1px solid #d8d4c9; }
+      .list li { padding: 17px 0; border-bottom: 1px solid #d8d4c9; font-size: 15px; }
+      .list strong { display: inline-block; width: 135px; color: var(--sage); font-size: 12px; letter-spacing: .06em; }
+      .cta { padding: 104px 0; text-align: center; }
+      .cta p { max-width: 590px; margin: 0 auto; color: var(--muted); }
+      .footer { border-top: 1px solid var(--line); padding: 26px 0 34px; color: var(--muted); font-size: 12px; }
+      .footer-inner { display: flex; justify-content: space-between; gap: 18px; }
+      @media (max-width: 760px) {
+        .wrap { width: min(100% - 32px, 1120px); }
+        .nav-links { display: none; }
+        .hero { padding: 70px 0; }
+        .hero-grid, .quiet-grid { grid-template-columns: 1fr; gap: 42px; }
+        .feature-grid, .flow, .pricing-grid { grid-template-columns: 1fr; }
+        .section { padding: 72px 0; }
+        .feature { min-height: auto; }
+        .footer-inner { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <nav class="wrap nav" aria-label="メインナビゲーション">
+        <a class="brand" href="#top">StoryCanon</a>
+        <div class="nav-links">
+          <a href="#features">できること</a>
+          <a href="#flow">使い方</a>
+          <a href="#pricing">料金プラン</a>
+          <a href="#privacy">プライバシー</a>
+        </div>
+        <!-- 公開後にログインページのURLへ差し替えてください -->
+        <a class="button button-primary" href="https://YOUR-STORYCANON-APP-URL/login">ログイン</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <h1>物語のための、<br />静かな記憶庫。</h1>
+            <p class="lead">StoryCanonは、ChatGPTと一緒につくる物語の本文・登場人物・伏線・世界観を、作品ごとに静かに整理するプライベートな創作記録アプリです。</p>
+            <div class="actions">
+              <a class="button button-primary" href="https://YOUR-STORYCANON-APP-URL/login">StoryCanonをはじめる</a>
+              <a class="button button-secondary" href="#features">できることを見る</a>
+            </div>
+            <p class="note">ご利用にはStoryCanonアカウントが必要です。</p>
+          </div>
+          <div class="app-card" aria-label="StoryCanonの画面イメージ">
+            <div class="app-top"><strong>凪の街の観測者</strong><span class="app-badge">保存済み</span></div>
+            <div class="app-content">
+              <div class="tabs"><span>概要</span><span>シーン</span><span>キャラクター</span><span>世界観</span><span>伏線</span></div>
+              <div class="state">
+                <div class="state-title"><span>最新の物語状態</span><span>2026.07.10</span></div>
+                <p>主人公は観測塔の記録に、失踪した姉の筆跡を見つけた。</p>
+                <p><strong>未解決:</strong> 記録を書き換えた人物は誰か。</p>
+                <p><strong>次の選択肢:</strong> 港の管理人を訪ねる。</p>
+              </div>
+              <div class="stats"><div class="stat"><span>シーン</span><strong>18</strong></div><div class="stat"><span>伏線</span><strong>6</strong></div><div class="stat"><span>TODO</span><strong>3</strong></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="wrap section">
+          <div class="section-intro"><h2>散らばりやすい創作の情報を、<br/>作品のそばに。</h2><p>会話の中で生まれた大切な設定を、次の執筆のためにすぐ見つけられる形で残します。</p></div>
+          <div class="feature-grid">
+            <article class="feature"><span class="feature-number">01</span><h3>本文とシーン</h3><p>書き上げた本文、章、シーンの要約を作品ごとに保存。読み返したい場所へ、いつでも戻れます。</p></article>
+            <article class="feature"><span class="feature-number">02</span><h3>人物と世界観</h3><p>人物の目的や秘密、場所やルールを一つの作品に紐づけて整理。設定の揺れを抑えます。</p></article>
+            <article class="feature"><span class="feature-number">03</span><h3>伏線と物語状態</h3><p>まだ回収していない伏線、プロットの流れ、次に検討したいことを確認して、続きを書きやすくします。</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="flow" class="quiet">
+        <div class="wrap section">
+          <div class="section-intro"><h2>会話でつくり、<br/>記録して、また書く。</h2><p>創作の流れを止めずに、必要な情報だけをStoryCanonへ残せます。</p></div>
+          <div class="flow">
+            <article class="flow-item"><h3>ChatGPTで物語を書く</h3><p>アイデア出し、シーンの執筆、設定の検討など、いつもの会話から物語を育てます。</p></article>
+            <article class="flow-item"><h3>StoryCanonに保存する</h3><p>本文や人物、伏線、物語の状態を作品に記録。作品の文脈を保ったまま整頓できます。</p></article>
+            <article class="flow-item"><h3>次の一文へ戻る</h3><p>未解決の要素やこれまでの出来事を確認して、迷いすぎずに次のシーンへ進めます。</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing">
+        <div class="wrap section">
+          <div class="section-intro"><h2>創作のペースに合わせたプラン。</h2><p>まずは無料でお試しいただけます。より多くの作品や、深い記録・書き出しが必要になったらアップグレードできます。</p></div>
+          <div class="pricing-grid">
+            <article class="plan">
+              <p class="plan-label">はじめての方へ</p>
+              <h3>Free</h3>
+              <p class="price">$0 <small>/ 月</small></p>
+              <p class="annual">無料で利用できます</p>
+              <ul>
+                <li>作品は1件まで</li>
+                <li>作品ごとに保存できる本文は1万字まで</li>
+                <li>キャラクターは10人まで</li>
+                <li>本文をテキスト・Markdownで出力</li>
+              </ul>
+              <a class="button button-secondary" href="https://YOUR-STORYCANON-APP-URL/login">無料ではじめる</a>
+            </article>
+            <article class="plan plan-featured">
+              <p class="plan-label">継続して書く方へ</p>
+              <h3>Plus</h3>
+              <p class="price">$9 <small>/ 月</small></p>
+              <p class="annual">年払い: $90 / 年</p>
+              <ul>
+                <li>作品は10件まで</li>
+                <li>作品ごとに保存できる本文は10万字まで</li>
+                <li>キャラクターは100人まで</li>
+                <li>伏線・プロット・TODOを各100件まで保存</li>
+                <li>JSONでのエクスポートに対応</li>
+              </ul>
+              <a class="button button-primary" href="https://YOUR-STORYCANON-APP-URL/login">Plusをはじめる</a>
+            </article>
+            <article class="plan">
+              <p class="plan-label">長編・シリーズ制作に</p>
+              <h3>Pro</h3>
+              <p class="price">$48 <small>/ 月</small></p>
+              <p class="annual">年払い: $480 / 年</p>
+              <ul>
+                <li>作品数・本文量を無制限で保存</li>
+                <li>キャラクター、伏線、プロット、TODOを無制限で管理</li>
+                <li>本文・JSONを含むすべての出力形式に対応</li>
+                <li>優先サポートと将来の追加機能を提供</li>
+              </ul>
+              <a class="button button-secondary" href="https://YOUR-STORYCANON-APP-URL/login">Proをはじめる</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy">
+        <div class="wrap section quiet-grid">
+          <div><h2>あなたの物語を、あなたのために。</h2></div>
+          <div><p>StoryCanonの作品は、あなた自身の創作を見失わないための記録です。公開を前提にせず、作品ごとに情報を整理・管理できます。</p><ul class="list"><li><strong>作品単位</strong>本文・人物・世界観を作品ごとに管理</li><li><strong>創作の文脈</strong>伏線、TODO、物語状態をまとめて確認</li><li><strong>必要なときに出力</strong>本文や関連情報をエクスポート可能</li></ul></div>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div class="wrap"><h2>物語の続きを、<br />安心して書ける場所へ。</h2><p>あなたのイマジネーションと物語を残しておきませんか。</p><div class="actions" style="justify-content:center"><a class="button button-primary" href="https://YOUR-STORYCANON-APP-URL/login">StoryCanonをはじめる</a></div></div>
+      </section>
+    </main>
+
+    <footer class="footer"><div class="wrap footer-inner"><span>© StoryCanon</span><span>ChatGPTとともにつくる物語の記録庫</span><span><a href="https://openai.com/brand/">ChatGPTはOpenAIの商標です。</a></span></div></footer>
+  </body>
+</html>
