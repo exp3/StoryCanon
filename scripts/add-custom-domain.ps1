@@ -141,9 +141,12 @@ if (-not $Issued) {
   throw "Certificate was not issued in time. Check DNS propagation and retry."
 }
 
-$ConditionsJson = @(
+# NOTE: pass the single-element array via -InputObject, not the pipeline.
+# Piping (`@(...) | ConvertTo-Json`) enumerates the array and emits a bare
+# object `{...}`, but `elbv2 modify-rule --conditions` requires a JSON array.
+$ConditionsJson = ConvertTo-Json -Depth 10 -InputObject @(
   @{ Field = "host-header"; HostHeaderConfig = @{ Values = @($AutoDomain, $DomainName) } }
-) | ConvertTo-Json -Depth 10
+)
 $ConditionsFile = New-TemporaryFile
 Write-Utf8NoBom -Path $ConditionsFile.FullName -Content $ConditionsJson
 
