@@ -25,6 +25,12 @@ const database = new DatabaseStack(app, `${prefix}-database`, {
   vpc: network.vpc,
   appSecurityGroup: network.appSecurityGroup,
 });
+const paymentMode = app.node.tryGetContext("paymentMode") ?? process.env.PAYMENT_MODE ?? "mock";
+const stripePricePlus = app.node.tryGetContext("stripePricePlus") ?? process.env.STRIPE_PRICE_PLUS ?? "";
+const stripePricePro = app.node.tryGetContext("stripePricePro") ?? process.env.STRIPE_PRICE_PRO ?? "";
+const hostedZoneName = app.node.tryGetContext("hostedZoneName") ?? process.env.HOSTED_ZONE_NAME;
+const appDomainName = app.node.tryGetContext("appDomainName") ?? process.env.APP_DOMAIN_NAME;
+
 const compute = new ComputeStack(app, `${prefix}-app`, {
   env,
   prefix,
@@ -33,10 +39,13 @@ const compute = new ComputeStack(app, `${prefix}-app`, {
   storage,
   secrets,
   useExistingEcrRepository,
+  paymentMode,
+  stripePricePlus,
+  stripePricePro,
+  hostedZoneName,
+  appDomainName,
 });
 
-const hostedZoneName = app.node.tryGetContext("hostedZoneName") ?? process.env.HOSTED_ZONE_NAME;
-const appDomainName = app.node.tryGetContext("appDomainName") ?? process.env.APP_DOMAIN_NAME;
 if (hostedZoneName && appDomainName) {
   new DnsStack(app, `${prefix}-dns`, {
     env,

@@ -6,6 +6,8 @@ import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as codedeploy from "aws-cdk-lib/aws-codedeploy";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as route53 from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";
 import { DatabaseStack } from "./database-stack";
 import { StorageStack } from "./storage-stack";
@@ -20,6 +22,17 @@ export interface ComputeStackProps extends cdk.StackProps {
   useExistingEcrRepository?: boolean;
   /** Minutes CodeDeploy keeps the old (blue) task set alive after cutover, so a rollback is instant. Defaults to 5. */
   bakeTimeMinutes?: number;
+  /** Container PAYMENT_MODE. Defaults to "mock" so live billing is never enabled by accident. */
+  paymentMode?: string;
+  stripePricePlus?: string;
+  stripePricePro?: string;
+  /**
+   * When both are set, the ALB serves production over HTTPS with an ACM cert
+   * (DNS-validated in the zone) and redirects :80 -> :443. Without them the
+   * production listener stays on plain :80.
+   */
+  hostedZoneName?: string;
+  appDomainName?: string;
 }
 
 /**
@@ -99,10 +112,12 @@ export class ComputeStack extends cdk.Stack {
       environment: {
         NODE_ENV: "production",
         APP_ENV: props.prefix,
-        PAYMENT_MODE: "mock",
+        PAYMENT_MODE: props.paymentMode ?? "mock",
         DATABASE_HOST: props.database.endpointAddress,
         DATABASE_PORT: props.database.endpointPort,
         EXPORT_BUCKET_NAME: props.storage.exportBucket.bucketName,
+        STRIPE_PRICE_PLUS: props.stripePricePlus ?? "",
+        STRIPE_PRICE_PRO: props.stripePricePro ?? "",
       },
       secrets: Object.fromEntries(
         Object.entries(props.secrets.appSecrets).map(([name, secret]) => [
@@ -179,13 +194,41 @@ export class ComputeStack extends cdk.Stack {
       healthCheck,
     });
 
-    // Production traffic on :80 (starts on blue); test traffic on :8080 (green)
-    // so a new version can be validated before the production cutover.
-    const productionListener = this.loadBalancer.addListener("ProductionListener", {
-      port: 80,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      defaultTargetGroups: [blueTargetGroup],
-    });
+    // Production traffic starts on blue; test traffic on :8080 (green) so a new
+    // version can be validated before the production cutover. With a domain we
+    // serve production over HTTPS (ACM cert, DNS-validated) and redirect :80 ->
+    // :443; without one the production listener stays on plain :80 (e.g. dev).
+    let productionListener: elbv2.ApplicationListener;
+    if (props.hostedZoneName && props.appDomainName) {
+      const hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
+        domainName: props.hostedZoneName,
+      });
+      const certificate = new acm.Certificate(this, "Certificate", {
+        domainName: props.appDomainName,
+        validation: acm.CertificateValidation.fromDns(hostedZone),
+      });
+      productionListener = this.loadBalancer.addListener("ProductionListener", {
+        port: 443,
+        protocol: elbv2.ApplicationProtocol.HTTPS,
+        certificates: [certificate],
+        defaultTargetGroups: [blueTargetGroup],
+      });
+      this.loadBalancer.addListener("HttpRedirectListener", {
+        port: 80,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        defaultAction: elbv2.ListenerAction.redirect({
+          protocol: "HTTPS",
+          port: "443",
+          permanent: true,
+        }),
+      });
+    } else {
+      productionListener = this.loadBalancer.addListener("ProductionListener", {
+        port: 80,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        defaultTargetGroups: [blueTargetGroup],
+      });
+    }
 
     const testListener = this.loadBalancer.addListener("TestListener", {
       port: 8080,
