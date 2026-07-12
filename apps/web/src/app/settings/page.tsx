@@ -57,6 +57,32 @@ export default async function SettingsPage({
           {t.currentPlanLabel}: <span className="font-medium text-[#1d1d1b]">{planLabel}</span>
           {statusSuffix}
         </p>
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded border border-[#dedbd2] bg-[#f7f7f4] p-3">
+            <p className="font-medium text-[#1d1d1b]">Plus</p>
+            <p className="mt-1 text-sm text-[#4b4b45]">
+              $9 / {user.locale === "ja" ? "月（税抜）" : "month (excluding tax)"}
+              <br />
+              $9.90 / {user.locale === "ja" ? "月（税込）" : "month (including tax)"}
+              <br />
+              $90 / {user.locale === "ja" ? "年（税抜）" : "year (excluding tax)"}
+              <br />
+              $99 / {user.locale === "ja" ? "年（税込）" : "year (including tax)"}
+            </p>
+          </div>
+          <div className="rounded border border-[#dedbd2] bg-[#f7f7f4] p-3">
+            <p className="font-medium text-[#1d1d1b]">Pro</p>
+            <p className="mt-1 text-sm text-[#4b4b45]">
+              $48 / {user.locale === "ja" ? "月（税抜）" : "month (excluding tax)"}
+              <br />
+              $52.80 / {user.locale === "ja" ? "月（税込）" : "month (including tax)"}
+              <br />
+              $480 / {user.locale === "ja" ? "年（税抜）" : "year (excluding tax)"}
+              <br />
+              $528 / {user.locale === "ja" ? "年（税込）" : "year (including tax)"}
+            </p>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           {plan !== "PLUS" && plan !== "PRO" ? (
             <form action={createCheckoutSession}>

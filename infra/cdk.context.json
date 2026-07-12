@@ -3,5 +3,9 @@
     "ap-northeast-1a",
     "ap-northeast-1c",
     "ap-northeast-1d"
-  ]
+  ],
+  "hosted-zone:account=199041707218:domainName=softglow.jp:region=ap-northeast-1": {
+    "Id": "/hostedzone/Z04472712PET24PRE9WTF",
+    "Name": "softglow.jp."
+  }
 }

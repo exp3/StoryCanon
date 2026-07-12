@@ -1589,10 +1589,10 @@ Proは緩和する。
 
 プラン：
 
-- Plus: $9 / month
-- Pro: $48 / month
-- Plus: $90 / year
-- Pro: $480 / year
+- Plus: $9 / month（税抜） / $9.90 / month（税込）
+- Pro: $48 / month（税抜） / $52.80 / month（税込）
+- Plus: $90 / year（税抜） / $99 / year（税込）
+- Pro: $480 / year（税抜） / $528 / year（税込）
 
 ### 21.2 Webhook
 
