@@ -12,6 +12,7 @@ export interface DatabaseStackProps extends cdk.StackProps {
 
 export class DatabaseStack extends cdk.Stack {
   readonly instance: rds.DatabaseInstance;
+  readonly securityGroup: ec2.SecurityGroup;
   readonly secretArn: string;
   readonly endpointAddress: string;
   readonly endpointPort: string;
@@ -25,6 +26,7 @@ export class DatabaseStack extends cdk.Stack {
       allowAllOutbound: false,
     });
     dbSecurityGroup.addIngressRule(props.appSecurityGroup, ec2.Port.tcp(5432), "Application runtime to PostgreSQL");
+    this.securityGroup = dbSecurityGroup;
 
     this.instance = new rds.DatabaseInstance(this, "Postgres", {
       instanceIdentifier: `${props.prefix}-db`,

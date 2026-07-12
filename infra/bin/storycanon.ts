@@ -4,7 +4,7 @@ import { NetworkStack } from "../lib/network-stack";
 import { DatabaseStack } from "../lib/database-stack";
 import { StorageStack } from "../lib/storage-stack";
 import { SecretsStack } from "../lib/secrets-stack";
-import { AppRunnerStack } from "../lib/app-runner-stack";
+import { ComputeStack } from "../lib/compute-stack";
 import { DnsStack } from "../lib/dns-stack";
 
 const app = new cdk.App();
@@ -25,11 +25,10 @@ const database = new DatabaseStack(app, `${prefix}-database`, {
   vpc: network.vpc,
   appSecurityGroup: network.appSecurityGroup,
 });
-const appRunner = new AppRunnerStack(app, `${prefix}-app`, {
+const compute = new ComputeStack(app, `${prefix}-app`, {
   env,
   prefix,
   vpc: network.vpc,
-  appSecurityGroup: network.appSecurityGroup,
   database,
   storage,
   secrets,
@@ -44,6 +43,6 @@ if (hostedZoneName && appDomainName) {
     prefix,
     hostedZoneName,
     appDomainName,
-    serviceArn: appRunner.serviceArn,
+    loadBalancer: compute.loadBalancer,
   });
 }
