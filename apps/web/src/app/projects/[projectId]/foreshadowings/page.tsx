@@ -1,9 +1,14 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
+import { createForeshadowingSchema } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
+import { EditableContent } from "@/components/editable-content";
+
+const statuses = ["UNPLANTED", "PLANTED", "IN_PROGRESS", "RESOLVED", "DROPPED"];
+const importances = ["LOW", "MEDIUM", "HIGH"];
 
 export default async function ForeshadowingsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
@@ -18,6 +23,27 @@ export default async function ForeshadowingsPage({ params }: { params: Promise<{
     where: { projectId, deletedAt: null },
     orderBy: { updatedAt: "desc" },
   });
+
+  async function updateForeshadowing(id: string, formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.foreshadowing.findFirst({
+      where: { id, projectId, deletedAt: null, project: { userId: currentUser.id, deletedAt: null } },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const input = createForeshadowingSchema.partial().parse({
+      title: String(formData.get("title") ?? "").trim(),
+      description: String(formData.get("description") ?? "").trim(),
+      plannedResolution: String(formData.get("plannedResolution") ?? "").trim(),
+      status: String(formData.get("status") ?? ""),
+      importance: String(formData.get("importance") ?? ""),
+    });
+    await prisma.foreshadowing.update({ where: { id: owned.id }, data: input });
+    redirect(`/projects/${projectId}/foreshadowings`);
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -34,26 +60,38 @@ export default async function ForeshadowingsPage({ params }: { params: Promise<{
         <ul className="space-y-3">
           {foreshadowings.map((item) => (
             <li key={item.id} className="rounded border bg-white p-4">
-              <div className="flex items-center justify-between gap-4">
-                <p className="font-medium">{item.title}</p>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs text-[#666]">
-                    {item.status} ・{t.importanceLabel} {item.importance}
-                  </span>
-                  <CopyButton
-                    labels={copy}
-                    value={[item.title, item.description, item.plannedResolution ? `${t.resolutionLabel} ${item.plannedResolution}` : ""]
-                      .filter(Boolean)
-                      .join("\n")}
-                  />
+              <EditableContent
+                action={updateForeshadowing.bind(null, item.id)}
+                labels={{ edit: copy.edit, save: copy.saveChanges, cancel: copy.cancel }}
+                fields={[
+                  { name: "title", label: t.titleLabel, value: item.title, required: true },
+                  { name: "description", label: t.descriptionLabel, value: item.description, kind: "textarea", required: true },
+                  { name: "plannedResolution", label: t.plannedResolutionLabel, value: item.plannedResolution ?? "", kind: "textarea" },
+                  { name: "status", label: t.statusLabel, value: item.status, kind: "select", options: statuses },
+                  { name: "importance", label: t.importanceLabel, value: item.importance, kind: "select", options: importances },
+                ]}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <p className="font-medium">{item.title}</p>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-xs text-[#666]">
+                      {item.status} ・{t.importanceLabel} {item.importance}
+                    </span>
+                    <CopyButton
+                      labels={copy}
+                      value={[item.title, item.description, item.plannedResolution ? `${t.resolutionLabel} ${item.plannedResolution}` : ""]
+                        .filter(Boolean)
+                        .join("\n")}
+                    />
+                  </div>
                 </div>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-[#555]">{item.description}</p>
-              {item.plannedResolution ? (
-                <p className="mt-2 text-sm leading-6 text-[#555]">
-                  {t.resolutionLabel} {item.plannedResolution}
-                </p>
-              ) : null}
+                <p className="mt-2 text-sm leading-6 text-[#555]">{item.description}</p>
+                {item.plannedResolution ? (
+                  <p className="mt-2 text-sm leading-6 text-[#555]">
+                    {t.resolutionLabel} {item.plannedResolution}
+                  </p>
+                ) : null}
+              </EditableContent>
             </li>
           ))}
         </ul>

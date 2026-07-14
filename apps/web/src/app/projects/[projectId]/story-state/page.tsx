@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary, localeTag } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
+import { createStoryStateSnapshotSchema } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
+import { EditableContent } from "@/components/editable-content";
 
 export default async function StoryStatePage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
@@ -19,6 +21,33 @@ export default async function StoryStatePage({ params }: { params: Promise<{ pro
     orderBy: { createdAt: "desc" },
   });
 
+  async function updateLatestStoryState(id: string, formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const latest = await prisma.storyStateSnapshot.findFirst({
+      where: { projectId, deletedAt: null, project: { userId: currentUser.id, deletedAt: null } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (!latest || latest.id !== id) notFound();
+
+    const input = createStoryStateSnapshotSchema.partial().parse({
+      summary: String(formData.get("summary") ?? "").trim(),
+      recentEvents: String(formData.get("recentEvents") ?? "").trim(),
+      characterStates: String(formData.get("characterStates") ?? "").trim(),
+      unresolvedProblems: String(formData.get("unresolvedProblems") ?? "").trim(),
+      unresolvedForeshadowings: String(formData.get("unresolvedForeshadowings") ?? "").trim(),
+      activePlotThreads: String(formData.get("activePlotThreads") ?? "").trim(),
+      nextOptions: String(formData.get("nextOptions") ?? "").trim(),
+      avoidElements: String(formData.get("avoidElements") ?? "").trim(),
+      writingRules: String(formData.get("writingRules") ?? "").trim(),
+      userPreferences: String(formData.get("userPreferences") ?? "").trim(),
+    });
+    await prisma.storyStateSnapshot.update({ where: { id: latest.id }, data: input });
+    redirect(`/projects/${projectId}/story-state`);
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
@@ -32,40 +61,62 @@ export default async function StoryStatePage({ params }: { params: Promise<{ pro
         <p className="text-sm text-[#555]">{t.empty}</p>
       ) : (
         <ul className="space-y-4">
-          {snapshots.map((snapshot) => (
-            <li key={snapshot.id} className="rounded border bg-white p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-[#666]">{snapshot.createdAt.toLocaleString(localeTag(user.locale))}</p>
-                <CopyButton
-                  labels={copy}
-                  value={[
-                    snapshot.summary,
-                    snapshot.recentEvents ? `${t.recentEventsLabel} ${snapshot.recentEvents}` : "",
-                    snapshot.unresolvedProblems ? `${t.unresolvedLabel} ${snapshot.unresolvedProblems}` : "",
-                    snapshot.nextOptions ? `${t.nextOptionsLabel} ${snapshot.nextOptions}` : "",
-                  ]
-                    .filter(Boolean)
-                    .join("\n")}
-                />
-              </div>
-              <p className="mt-2 text-sm leading-6 text-[#555]">{snapshot.summary}</p>
-              {snapshot.recentEvents ? (
-                <p className="mt-2 text-sm leading-6 text-[#555]">
-                  {t.recentEventsLabel} {snapshot.recentEvents}
-                </p>
-              ) : null}
-              {snapshot.unresolvedProblems ? (
-                <p className="mt-2 text-sm leading-6 text-[#555]">
-                  {t.unresolvedLabel} {snapshot.unresolvedProblems}
-                </p>
-              ) : null}
-              {snapshot.nextOptions ? (
-                <p className="mt-2 text-sm leading-6 text-[#555]">
-                  {t.nextOptionsLabel} {snapshot.nextOptions}
-                </p>
-              ) : null}
-            </li>
-          ))}
+          {snapshots.map((snapshot, index) => {
+            const content = (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-[#666]">
+                    {index === 0 ? <span className="mr-2 rounded bg-[#ece8dd] px-2 py-0.5">{t.latestLabel}</span> : null}
+                    {snapshot.createdAt.toLocaleString(localeTag(user.locale))}
+                  </p>
+                  <CopyButton
+                    labels={copy}
+                    value={[
+                      snapshot.summary,
+                      snapshot.recentEvents ? `${t.recentEventsLabel} ${snapshot.recentEvents}` : "",
+                      snapshot.characterStates ? `${t.characterStatesLabel}: ${snapshot.characterStates}` : "",
+                      snapshot.unresolvedProblems ? `${t.unresolvedLabel} ${snapshot.unresolvedProblems}` : "",
+                      snapshot.unresolvedForeshadowings ? `${t.unresolvedForeshadowingsLabel}: ${snapshot.unresolvedForeshadowings}` : "",
+                      snapshot.activePlotThreads ? `${t.activePlotThreadsLabel}: ${snapshot.activePlotThreads}` : "",
+                      snapshot.nextOptions ? `${t.nextOptionsLabel} ${snapshot.nextOptions}` : "",
+                      snapshot.avoidElements ? `${t.avoidElementsLabel}: ${snapshot.avoidElements}` : "",
+                      snapshot.writingRules ? `${t.writingRulesLabel}: ${snapshot.writingRules}` : "",
+                      snapshot.userPreferences ? `${t.userPreferencesLabel}: ${snapshot.userPreferences}` : "",
+                    ].filter(Boolean).join("\n")}
+                  />
+                </div>
+                <p className="mt-2 text-sm leading-6 text-[#555]">{snapshot.summary}</p>
+                {snapshot.recentEvents ? <p className="mt-2 text-sm leading-6 text-[#555]">{t.recentEventsLabel} {snapshot.recentEvents}</p> : null}
+                {snapshot.unresolvedProblems ? <p className="mt-2 text-sm leading-6 text-[#555]">{t.unresolvedLabel} {snapshot.unresolvedProblems}</p> : null}
+                {snapshot.nextOptions ? <p className="mt-2 text-sm leading-6 text-[#555]">{t.nextOptionsLabel} {snapshot.nextOptions}</p> : null}
+              </>
+            );
+
+            return (
+              <li key={snapshot.id} className="rounded border bg-white p-4">
+                {index === 0 ? (
+                  <EditableContent
+                    action={updateLatestStoryState.bind(null, snapshot.id)}
+                    labels={{ edit: copy.edit, save: copy.saveChanges, cancel: copy.cancel }}
+                    fields={[
+                      { name: "summary", label: t.summaryLabel, value: snapshot.summary, kind: "textarea", required: true },
+                      { name: "recentEvents", label: t.recentEventsFormLabel, value: snapshot.recentEvents ?? "", kind: "textarea" },
+                      { name: "characterStates", label: t.characterStatesLabel, value: snapshot.characterStates ?? "", kind: "textarea" },
+                      { name: "unresolvedProblems", label: t.unresolvedProblemsLabel, value: snapshot.unresolvedProblems ?? "", kind: "textarea" },
+                      { name: "unresolvedForeshadowings", label: t.unresolvedForeshadowingsLabel, value: snapshot.unresolvedForeshadowings ?? "", kind: "textarea" },
+                      { name: "activePlotThreads", label: t.activePlotThreadsLabel, value: snapshot.activePlotThreads ?? "", kind: "textarea" },
+                      { name: "nextOptions", label: t.nextOptionsFormLabel, value: snapshot.nextOptions ?? "", kind: "textarea" },
+                      { name: "avoidElements", label: t.avoidElementsLabel, value: snapshot.avoidElements ?? "", kind: "textarea" },
+                      { name: "writingRules", label: t.writingRulesLabel, value: snapshot.writingRules ?? "", kind: "textarea" },
+                      { name: "userPreferences", label: t.userPreferencesLabel, value: snapshot.userPreferences ?? "", kind: "textarea" },
+                    ]}
+                  >
+                    {content}
+                  </EditableContent>
+                ) : content}
+              </li>
+            );
+          })}
         </ul>
       )}
     </main>

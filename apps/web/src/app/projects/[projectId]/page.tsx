@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary, localeTag, type Dictionary, type Locale } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
+import { createProjectSchema } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
+import { ProjectTitleEditor } from "@/components/project-title-editor";
 
 function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
   return [
@@ -70,12 +72,31 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   const latestStoryState = project.storyStateSnapshots[0] ?? null;
 
+  async function updateProjectTitle(formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.project.findFirst({
+      where: { id: projectId, userId: currentUser.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const title = createProjectSchema.shape.title.parse(String(formData.get("title") ?? "").trim());
+    await prisma.project.update({ where: { id: owned.id }, data: { title } });
+    redirect(`/projects/${projectId}`);
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
       <header className="mb-6">
         <p className="text-sm text-[#666]">{project.id}</p>
         <div className="mt-1 flex items-start justify-between gap-4">
-          <h1 className="text-3xl font-semibold">{project.title}</h1>
+          <ProjectTitleEditor
+            title={project.title}
+            action={updateProjectTitle}
+            labels={{ edit: t.editTitle, title: t.titleLabel, save: t.saveTitle, cancel: t.cancelTitleEdit }}
+          />
           <CopyButton
             labels={copy}
             className="mt-1 shrink-0 rounded border border-[#dedbd2] px-3 py-1 text-xs text-[#1d1d1b]"

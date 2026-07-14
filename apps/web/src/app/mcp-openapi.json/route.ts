@@ -115,6 +115,24 @@ export async function GET(req: NextRequest) {
         },
         ["projectId", "body"]
       ),
+      "/api/mcp/save-character": action(
+        { operationId: "saveCharacter", text: "キャラクター本体の設定を新規登録または更新する" },
+        {
+          ...projectIdProp,
+          characterId: { type: "string", description: "更新するキャラクターのID（新規登録時は省略）" },
+          name: { type: "string", description: "キャラクター名。characterId を省略した場合は必須で、同名キャラクターを更新し、存在しなければ新規登録する。characterId 指定時は任意で、指定するとその名前に改名する" },
+          role: { type: "string", description: "物語上の役割（主人公、相棒、敵役など）" },
+          age: { type: "string", description: "年齢" },
+          personality: { type: "string", description: "性格" },
+          speechStyle: { type: "string", description: "口調・話し方" },
+          appearance: { type: "string", description: "外見" },
+          background: { type: "string", description: "経歴・生い立ち・背景設定" },
+          goal: { type: "string", description: "目標・動機" },
+          secret: { type: "string", description: "秘密" },
+          currentState: { type: "string", description: "現在の状態" },
+        },
+        ["projectId"]
+      ),
       "/api/mcp/save-character-note": action(
         { operationId: "saveCharacterNote", text: "キャラクターメモを保存する(存在しないキャラ名は自動作成)" },
         {

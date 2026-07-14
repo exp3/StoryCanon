@@ -644,6 +644,30 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
       const { record: scene, commandId: sceneCommandId } = await createWithLog(mutationTargets.SCENE, actor, projectId, { ...input, chapterId, order, projectId }, txId);
       return json({ scene, commandId: sceneCommandId, transactionId: txId }, { status: 201 });
     }
+    if (action === "save-character") {
+      const characterId = typeof body.characterId === "string" ? body.characterId.trim() : "";
+
+      // Updating by id: name is optional so only the provided fields change (no forced rename).
+      if (characterId) {
+        const existing = await prisma.character.findFirst({ where: { id: characterId, projectId, deletedAt: null }, select: { id: true } });
+        if (!existing) return errorResponse("NOT_FOUND", "Character not found.", 404);
+        const input = createCharacterSchema.partial().parse(body);
+        const { record: character, commandId: undoToken } = await updateWithLog(mutationTargets.CHARACTER, actor, existing.id, input);
+        return json({ character, commandId: undoToken, created: false });
+      }
+
+      // Creating or upserting by name: name is required.
+      const input = createCharacterSchema.parse(body);
+      const existing = await prisma.character.findFirst({ where: { projectId, name: input.name, deletedAt: null }, select: { id: true } });
+      if (existing) {
+        const { record: character, commandId: undoToken } = await updateWithLog(mutationTargets.CHARACTER, actor, existing.id, input);
+        return json({ character, commandId: undoToken, created: false });
+      }
+
+      await assertCountLimit(projectId, "charactersPerProject");
+      const { record: character, commandId: undoToken } = await createWithLog(mutationTargets.CHARACTER, actor, projectId, { ...input, projectId });
+      return json({ character, commandId: undoToken, created: true }, { status: 201 });
+    }
     if (action === "save-character-note") {
       const input = createCharacterNoteSchema.parse(body);
       const txId = transactionId();
