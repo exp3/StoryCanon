@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
+import { createPlotThreadSchema } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
+import { EditableContent } from "@/components/editable-content";
+
+const statuses = ["NOT_STARTED", "IN_PROGRESS", "ON_HOLD", "RESOLVED", "DROPPED"];
 
 export default async function PlotThreadsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await requireSessionUser();
@@ -18,6 +22,27 @@ export default async function PlotThreadsPage({ params }: { params: Promise<{ pr
     where: { projectId, deletedAt: null },
     orderBy: { updatedAt: "desc" },
   });
+
+  async function updatePlotThread(id: string, formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.plotThread.findFirst({
+      where: { id, projectId, deletedAt: null, project: { userId: currentUser.id, deletedAt: null } },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const input = createPlotThreadSchema.partial().parse({
+      title: String(formData.get("title") ?? "").trim(),
+      description: String(formData.get("description") ?? "").trim(),
+      currentState: String(formData.get("currentState") ?? "").trim(),
+      resolutionCondition: String(formData.get("resolutionCondition") ?? "").trim(),
+      status: String(formData.get("status") ?? ""),
+    });
+    await prisma.plotThread.update({ where: { id: owned.id }, data: input });
+    redirect(`/projects/${projectId}/plot-threads`);
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -34,24 +59,41 @@ export default async function PlotThreadsPage({ params }: { params: Promise<{ pr
         <ul className="space-y-3">
           {plotThreads.map((item) => (
             <li key={item.id} className="rounded border bg-white p-4">
-              <div className="flex items-center justify-between gap-4">
-                <p className="font-medium">{item.title}</p>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs text-[#666]">{item.status}</span>
-                  <CopyButton
-                    labels={copy}
-                    value={[item.title, item.description, item.currentState ? `${t.currentStateLabel} ${item.currentState}` : ""]
-                      .filter(Boolean)
-                      .join("\n")}
-                  />
+              <EditableContent
+                action={updatePlotThread.bind(null, item.id)}
+                labels={{ edit: copy.edit, save: copy.saveChanges, cancel: copy.cancel }}
+                fields={[
+                  { name: "title", label: t.titleLabel, value: item.title, required: true },
+                  { name: "description", label: t.descriptionLabel, value: item.description ?? "", kind: "textarea" },
+                  { name: "currentState", label: t.currentStateFormLabel, value: item.currentState ?? "", kind: "textarea" },
+                  { name: "resolutionCondition", label: t.resolutionConditionLabel, value: item.resolutionCondition ?? "", kind: "textarea" },
+                  { name: "status", label: t.statusLabel, value: item.status, kind: "select", options: statuses },
+                ]}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <p className="font-medium">{item.title}</p>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-xs text-[#666]">{item.status}</span>
+                    <CopyButton
+                      labels={copy}
+                      value={[item.title, item.description, item.currentState ? `${t.currentStateLabel} ${item.currentState}` : ""]
+                        .filter(Boolean)
+                        .join("\n")}
+                    />
+                  </div>
                 </div>
-              </div>
-              {item.description ? <p className="mt-2 text-sm leading-6 text-[#555]">{item.description}</p> : null}
-              {item.currentState ? (
-                <p className="mt-2 text-sm leading-6 text-[#555]">
-                  {t.currentStateLabel} {item.currentState}
-                </p>
-              ) : null}
+                {item.description ? <p className="mt-2 text-sm leading-6 text-[#555]">{item.description}</p> : null}
+                {item.currentState ? (
+                  <p className="mt-2 text-sm leading-6 text-[#555]">
+                    {t.currentStateLabel} {item.currentState}
+                  </p>
+                ) : null}
+                {item.resolutionCondition ? (
+                  <p className="mt-2 text-sm leading-6 text-[#555]">
+                    {t.resolutionConditionLabel}: {item.resolutionCondition}
+                  </p>
+                ) : null}
+              </EditableContent>
             </li>
           ))}
         </ul>
