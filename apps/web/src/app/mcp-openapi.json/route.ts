@@ -66,6 +66,30 @@ export async function GET(req: NextRequest) {
         },
         ["title"]
       ),
+      "/api/mcp/update-private-project": action(
+        { operationId: "updatePrivateProject", text: "作品のタイトルや設定(ジャンル・前提・トーン等)を更新する" },
+        {
+          ...projectIdProp,
+          title: { type: "string", description: "新しいタイトル" },
+          genre: { type: "string" },
+          premise: { type: "string" },
+          tone: { type: "string" },
+          targetAudience: { type: "string" },
+          writingStyle: { type: "string" },
+          forbiddenElements: { type: "string" },
+          userPreferences: { type: "string" },
+        },
+        ["projectId"]
+      ),
+      "/api/mcp/consult-title": action(
+        { operationId: "consultTitle", text: "作品情報をもとにタイトル案を相談する(候補生成用のコンテキストと指針を返す)" },
+        {
+          ...projectIdProp,
+          direction: { type: "string", description: "希望するタイトルの方向性やキーワード(任意)" },
+          count: { type: "integer", description: "提案してほしい候補数(3〜12、既定6)" },
+        },
+        ["projectId"]
+      ),
       "/api/mcp/get-private-project-context": action(
         { operationId: "getPrivateProjectContext", text: "作品の現在状態(要約・キャラ・伏線・進行中プロット)を取得する" },
         { ...projectIdProp },

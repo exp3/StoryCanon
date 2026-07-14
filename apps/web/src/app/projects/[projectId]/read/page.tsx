@@ -9,6 +9,7 @@ export default async function ReadPage({ params }: { params: Promise<{ projectId
   const user = await requireSessionUser();
   const { projectId } = await params;
   const t = getDictionary(user.locale).reader;
+  const copy = getDictionary(user.locale).common;
 
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId: user.id, deletedAt: null },
@@ -56,7 +57,7 @@ export default async function ReadPage({ params }: { params: Promise<{ projectId
           projectId={project.id}
           scenes={readerScenes}
           initial={progress ?? null}
-          labels={{ autoSaved: t.autoSaved, resumed: t.resumed, empty: t.empty }}
+          labels={{ autoSaved: t.autoSaved, resumed: t.resumed, empty: t.empty, copy: copy.copy, copied: copy.copied }}
         />
       )}
     </main>

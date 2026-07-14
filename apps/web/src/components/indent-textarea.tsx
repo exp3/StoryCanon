@@ -20,6 +20,7 @@ function normalizeIndent(text: string) {
 }
 
 type Props = {
+  id?: string;
   name: string;
   defaultValue?: string;
   required?: boolean;
@@ -28,7 +29,7 @@ type Props = {
   hint?: string;
 };
 
-export function IndentTextarea({ name, defaultValue = "", required, className, formatLabel, hint }: Props) {
+export function IndentTextarea({ id, name, defaultValue = "", required, className, formatLabel, hint }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(defaultValue);
 
@@ -71,6 +72,7 @@ export function IndentTextarea({ name, defaultValue = "", required, className, f
       </div>
       <textarea
         ref={ref}
+        id={id}
         name={name}
         required={required}
         className={className}

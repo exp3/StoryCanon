@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { PlanLimitError, assertCanAddScene, assertCanCreateProject, assertCountLimit, getPlan } from "./plan";
-import { renderMarkdown } from "./export";
+import { renderMarkdown, renderPlainText } from "./export";
 import {
   createChapterSchema,
   createCharacterNoteSchema,
@@ -198,7 +198,11 @@ async function exportableProject(projectId: string) {
     include: {
       chapters: { where: { deletedAt: null }, orderBy: { order: "asc" } },
       scenes: { where: { deletedAt: null }, orderBy: { order: "asc" } },
-      characters: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      characters: {
+        where: { deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+        include: { notes: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } } },
+      },
       worldNotes: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
       foreshadowings: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
       plotThreads: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
@@ -206,6 +210,18 @@ async function exportableProject(projectId: string) {
       storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
     },
   });
+}
+
+/**
+ * Builds response headers that force a file download with a UTF-8 filename.
+ * Uses RFC 5987 `filename*` plus an ASCII `filename` fallback.
+ */
+function downloadHeaders(contentType: string, filename: string) {
+  const asciiFallback = filename.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_") || "export";
+  return {
+    "content-type": contentType,
+    "content-disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+  };
 }
 
 async function ensureJsonExportAllowed(userId: string) {
@@ -414,7 +430,15 @@ export async function handleWebApi(method: string, path: string[], actor: Curren
       }
       if (collection === "export") {
         const project = await exportableProject(projectId);
-        if (path[3] === "markdown") return new Response(renderMarkdown(project), { headers: { "content-type": "text/markdown; charset=utf-8" } });
+        const safeTitle = project.title.trim() || "export";
+        if (path[3] === "markdown") {
+          return new Response(renderMarkdown(project), { headers: downloadHeaders("text/markdown; charset=utf-8", `${safeTitle}.md`) });
+        }
+        if (path[3] === "text") {
+          const user = await prisma.user.findUnique({ where: { id: actor.userId }, select: { locale: true } });
+          const locale = user?.locale === "en" ? "en" : "ja";
+          return new Response(renderPlainText(project, locale), { headers: downloadHeaders("text/plain; charset=utf-8", `${safeTitle}.txt`) });
+        }
         if (path[3] === "json") {
           await ensureJsonExportAllowed(actor.userId);
           return json(project);
@@ -530,6 +554,49 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
     if (!projectId) return errorResponse("VALIDATION_ERROR", "projectId is required.");
     if (action === "rollback-command" || action === "undo-last-command") return rollbackCommand(actor, action === "undo-last-command" ? { projectId, force: body.force } : body);
     await requireOwnedProject(projectId, actor);
+
+    if (action === "update-private-project") return handleWebApi("PATCH", ["projects", projectId], actor, body);
+    if (action === "consult-title") {
+      const project = await prisma.project.findFirstOrThrow({
+        where: { id: projectId, deletedAt: null },
+        include: {
+          characters: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" }, take: 8, select: { name: true, role: true, goal: true } },
+          worldNotes: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" }, take: 5, select: { title: true, category: true } },
+          storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, take: 1, select: { summary: true } },
+        },
+      });
+      const direction = (typeof body.direction === "string" ? body.direction : "").trim().slice(0, 200);
+      const rawCount = Number(body.count);
+      const count = Number.isFinite(rawCount) ? Math.min(12, Math.max(3, Math.trunc(rawCount))) : 6;
+      const user = await prisma.user.findUnique({ where: { id: actor.userId }, select: { locale: true } });
+      const guidance =
+        user?.locale === "en"
+          ? `Based on the project information above, propose ${count} appealing title candidates. ` +
+            "Match the genre, tone, target audience, and overall mood, and vary the approach for each (e.g. literal / symbolic / question / character-name). " +
+            "For each candidate, add a one-line rationale (why it works) and its appeal to the reader. " +
+            (direction ? `In particular, reflect the user's requested direction: "${direction}". ` : "") +
+            "Once a favourite is chosen, update it with the update-private-project tool's title field."
+          : `上記の作品情報を踏まえ、魅力的なタイトル案を${count}個提案してください。` +
+            "ジャンル・トーン・想定読者・作品の雰囲気に合わせ、それぞれ方向性（例: 直球型／象徴型／問いかけ型／キャラ名型）を変えてバリエーションを出してください。" +
+            "各案には短い狙い（なぜ効果的か）と読者への訴求ポイントを1行添えてください。" +
+            (direction ? `特にユーザーの希望する方向性「${direction}」を反映してください。` : "") +
+            "気に入った案が決まったら update-private-project ツールで title を更新できます。";
+      return json({
+        currentTitle: project.title,
+        context: {
+          genre: project.genre,
+          premise: project.premise,
+          tone: project.tone,
+          targetAudience: project.targetAudience,
+          writingStyle: project.writingStyle,
+        },
+        characters: project.characters,
+        worldNoteHighlights: project.worldNotes,
+        latestStoryState: project.storyStateSnapshots[0]?.summary ?? null,
+        userDirection: direction || null,
+        guidance,
+      });
+    }
 
     if (action === "get-private-project-context" || action === "get-next-generation-context") {
       const project = await prisma.project.findFirstOrThrow({

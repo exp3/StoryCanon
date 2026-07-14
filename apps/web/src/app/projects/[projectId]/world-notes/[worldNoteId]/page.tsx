@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createWorldNoteSchema } from "@/server/validation";
+import { FieldCopyButton } from "@/components/copy-button";
 
 const categories = ["PLACE", "ORGANIZATION", "TECHNOLOGY", "HISTORY", "CULTURE", "ITEM", "RULE", "OTHER"] as const;
 const importances = ["LOW", "MEDIUM", "HIGH"] as const;
@@ -16,6 +17,7 @@ export default async function WorldNoteDetailPage({
   const user = await requireSessionUser();
   const { projectId, worldNoteId } = await params;
   const t = getDictionary(user.locale).worldNoteDetail;
+  const copy = getDictionary(user.locale).common;
 
   const project = await prisma.project.findFirst({ where: { id: projectId, userId: user.id, deletedAt: null } });
   if (!project) notFound();
@@ -62,10 +64,13 @@ export default async function WorldNoteDetailPage({
       </div>
 
       <form className="space-y-4 rounded border bg-white p-6" action={updateWorldNote}>
-        <label className="block">
-          <span className="text-sm font-medium">{t.labelTitle}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="title" defaultValue={worldNote.title} required />
-        </label>
+        <div className="block">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="wn-title">{t.labelTitle}</label>
+            <FieldCopyButton targetId="wn-title" labels={copy} />
+          </div>
+          <input id="wn-title" className="mt-1 w-full rounded border px-3 py-2" name="title" defaultValue={worldNote.title} required />
+        </div>
         <label className="block">
           <span className="text-sm font-medium">{t.labelCategory}</span>
           <select className="mt-1 w-full rounded border px-3 py-2" name="category" defaultValue={worldNote.category}>
@@ -86,10 +91,13 @@ export default async function WorldNoteDetailPage({
             ))}
           </select>
         </label>
-        <label className="block">
-          <span className="text-sm font-medium">{t.labelBody}</span>
-          <textarea className="mt-1 min-h-48 w-full rounded border px-3 py-2" name="body" defaultValue={worldNote.body} required />
-        </label>
+        <div className="block">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="wn-body">{t.labelBody}</label>
+            <FieldCopyButton targetId="wn-body" labels={copy} />
+          </div>
+          <textarea id="wn-body" className="mt-1 min-h-48 w-full rounded border px-3 py-2" name="body" defaultValue={worldNote.body} required />
+        </div>
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
           {t.save}
         </button>

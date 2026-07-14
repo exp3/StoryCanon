@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CopyButton } from "@/components/copy-button";
 
 export type ReaderScene = {
   id: string;
@@ -13,7 +14,7 @@ type Props = {
   projectId: string;
   scenes: ReaderScene[];
   initial: { sceneId: string | null; scrollRatio: number } | null;
-  labels: { autoSaved: string; resumed: string; empty: string };
+  labels: { autoSaved: string; resumed: string; empty: string; copy: string; copied: string };
 };
 
 const TOP_OFFSET = 96; // px from the viewport top used to decide the "current" scene
@@ -119,6 +120,13 @@ export function Reader({ projectId, scenes, initial, labels }: Props) {
               </h2>
             ) : null}
             <h3 className="mb-6 text-center text-xl font-semibold text-[#2a2a26]">{scene.title}</h3>
+            <div className="mb-4 flex justify-end">
+              <CopyButton
+                value={scene.body}
+                labels={{ copy: labels.copy, copied: labels.copied }}
+                className="rounded border border-[#e2ddcf] px-2 py-1 text-xs text-[#8a8578] hover:text-[#4b4b45]"
+              />
+            </div>
             <div className="whitespace-pre-wrap text-[1.05rem] leading-[2.1] text-[#2a2a26]">{scene.body}</div>
           </section>
         ))}

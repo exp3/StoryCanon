@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createCharacterSchema } from "@/server/validation";
+import { CopyButton, FieldCopyButton } from "@/components/copy-button";
 
 export default async function CharacterDetailPage({
   params,
@@ -13,6 +14,7 @@ export default async function CharacterDetailPage({
   const user = await requireSessionUser();
   const { projectId, characterId } = await params;
   const t = getDictionary(user.locale).characterDetail;
+  const copy = getDictionary(user.locale).common;
 
   const project = await prisma.project.findFirst({ where: { id: projectId, userId: user.id, deletedAt: null } });
   if (!project) notFound();
@@ -82,31 +84,36 @@ export default async function CharacterDetailPage({
       </div>
 
       <form className="space-y-4 rounded border bg-white p-6" action={updateCharacter}>
-        <label className="block">
-          <span className="text-sm font-medium">{t.labelName}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="name" defaultValue={character.name} required />
-        </label>
-        {fields.map(([label, key, multiline]) =>
-          multiline ? (
-            <label className="block" key={key}>
-              <span className="text-sm font-medium">{label}</span>
+        <div className="block">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="char-name">{t.labelName}</label>
+            <FieldCopyButton targetId="char-name" labels={copy} />
+          </div>
+          <input id="char-name" className="mt-1 w-full rounded border px-3 py-2" name="name" defaultValue={character.name} required />
+        </div>
+        {fields.map(([label, key, multiline]) => (
+          <div className="block" key={key}>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium" htmlFor={`char-${key}`}>{label}</label>
+              <FieldCopyButton targetId={`char-${key}`} labels={copy} />
+            </div>
+            {multiline ? (
               <textarea
+                id={`char-${key}`}
                 className="mt-1 min-h-20 w-full rounded border px-3 py-2"
                 name={key}
                 defaultValue={(character[key] as string) ?? ""}
               />
-            </label>
-          ) : (
-            <label className="block" key={key}>
-              <span className="text-sm font-medium">{label}</span>
+            ) : (
               <input
+                id={`char-${key}`}
                 className="mt-1 w-full rounded border px-3 py-2"
                 name={key}
                 defaultValue={(character[key] as string) ?? ""}
               />
-            </label>
-          )
-        )}
+            )}
+          </div>
+        ))}
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
           {t.save}
         </button>
@@ -120,7 +127,10 @@ export default async function CharacterDetailPage({
           <ul className="space-y-3">
             {notes.map((note) => (
               <li key={note.id} className="rounded border border-[#ece8dd] px-4 py-3">
-                {note.title ? <p className="font-medium">{note.title}</p> : null}
+                <div className="flex items-start justify-between gap-3">
+                  {note.title ? <p className="font-medium">{note.title}</p> : <span />}
+                  <CopyButton value={note.title ? `${note.title}\n${note.body}` : note.body} labels={copy} />
+                </div>
                 <p className="mt-1 text-sm leading-6 text-[#555]">{note.body}</p>
               </li>
             ))}
