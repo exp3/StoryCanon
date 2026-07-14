@@ -5,6 +5,7 @@ import { getDictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createSceneSchema } from "@/server/validation";
 import { IndentTextarea } from "@/components/indent-textarea";
+import { FieldCopyButton } from "@/components/copy-button";
 
 export default async function SceneDetailPage({
   params,
@@ -14,6 +15,7 @@ export default async function SceneDetailPage({
   const user = await requireSessionUser();
   const { projectId, sceneId } = await params;
   const t = getDictionary(user.locale).sceneDetail;
+  const copy = getDictionary(user.locale).common;
 
   const project = await prisma.project.findFirst({ where: { id: projectId, userId: user.id, deletedAt: null } });
   if (!project) notFound();
@@ -67,10 +69,13 @@ export default async function SceneDetailPage({
       </div>
 
       <form className="space-y-4 rounded border bg-white p-6" action={updateScene}>
-        <label className="block">
-          <span className="text-sm font-medium">{t.labelTitle}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="title" defaultValue={scene.title} required />
-        </label>
+        <div className="block">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="scene-title">{t.labelTitle}</label>
+            <FieldCopyButton targetId="scene-title" labels={copy} />
+          </div>
+          <input id="scene-title" className="mt-1 w-full rounded border px-3 py-2" name="title" defaultValue={scene.title} required />
+        </div>
         {chapters.length > 0 ? (
           <label className="block">
             <span className="text-sm font-medium">{t.labelChapter}</span>
@@ -84,13 +89,20 @@ export default async function SceneDetailPage({
             </select>
           </label>
         ) : null}
-        <label className="block">
-          <span className="text-sm font-medium">{t.labelSummary}</span>
-          <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="summary" defaultValue={scene.summary ?? ""} />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium">{t.labelBody}</span>
+        <div className="block">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="scene-summary">{t.labelSummary}</label>
+            <FieldCopyButton targetId="scene-summary" labels={copy} />
+          </div>
+          <textarea id="scene-summary" className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="summary" defaultValue={scene.summary ?? ""} />
+        </div>
+        <div className="block">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="scene-body">{t.labelBody}</label>
+            <FieldCopyButton targetId="scene-body" labels={copy} />
+          </div>
           <IndentTextarea
+            id="scene-body"
             name="body"
             defaultValue={scene.body}
             required
@@ -98,7 +110,7 @@ export default async function SceneDetailPage({
             formatLabel={t.indentFormat}
             hint={t.indentHint}
           />
-        </label>
+        </div>
         <div className="flex items-center justify-between">
           <button className="rounded bg-black px-4 py-2 text-white" type="submit">
             {t.save}

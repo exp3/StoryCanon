@@ -7,6 +7,10 @@ export function localeTag(locale: Locale) {
 }
 
 const en = {
+  common: {
+    copy: "Copy",
+    copied: "Copied",
+  },
   header: {
     dashboard: "Dashboard",
     projects: "Projects",
@@ -193,6 +197,8 @@ const en = {
     backToProject: "Back to Project",
     markdownTitle: "Markdown",
     markdownDesc: "A Markdown file bundling chapters, scenes, characters, and more",
+    textTitle: "Plain text",
+    textDesc: "A plain .txt file with no markup, ready to paste into an editor",
     jsonTitle: "JSON",
     jsonDesc: "Structured JSON containing all data",
     planRestriction: "(Available on Plus plan or higher)",
@@ -250,6 +256,10 @@ const en = {
 };
 
 const ja: typeof en = {
+  common: {
+    copy: "コピー",
+    copied: "コピーしました",
+  },
   header: {
     dashboard: "ダッシュボード",
     projects: "作品一覧",
@@ -436,6 +446,8 @@ const ja: typeof en = {
     backToProject: "作品詳細へ戻る",
     markdownTitle: "Markdown",
     markdownDesc: "章・シーン・キャラクターなどをまとめたMarkdownファイル",
+    textTitle: "テキスト",
+    textDesc: "記法なしのプレーンな.txtファイル。エディタにそのまま貼り付け可能",
     jsonTitle: "JSON",
     jsonDesc: "全データを含む構造化JSON",
     planRestriction: "(Plusプラン以上で利用可能)",

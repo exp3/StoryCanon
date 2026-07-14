@@ -30,7 +30,24 @@ export default async function ExportPage({ params }: { params: Promise<{ project
             <p className="font-medium">{t.markdownTitle}</p>
             <p className="mt-1 text-sm text-[#555]">{t.markdownDesc}</p>
           </div>
-          <a className="rounded bg-black px-4 py-2 text-sm text-white" href={`/api/projects/${projectId}/export/markdown`}>
+          <a
+            className="rounded bg-black px-4 py-2 text-sm text-white"
+            href={`/api/projects/${projectId}/export/markdown`}
+            download={`${project.title}.md`}
+          >
+            {t.download}
+          </a>
+        </div>
+        <div className="flex items-center justify-between rounded border border-[#ece8dd] px-4 py-3">
+          <div>
+            <p className="font-medium">{t.textTitle}</p>
+            <p className="mt-1 text-sm text-[#555]">{t.textDesc}</p>
+          </div>
+          <a
+            className="rounded bg-black px-4 py-2 text-sm text-white"
+            href={`/api/projects/${projectId}/export/text`}
+            download={`${project.title}.txt`}
+          >
             {t.download}
           </a>
         </div>

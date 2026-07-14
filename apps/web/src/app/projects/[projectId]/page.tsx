@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary, localeTag, type Dictionary, type Locale } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
+import { CopyButton } from "@/components/copy-button";
 
 function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
   return [
@@ -24,6 +25,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { projectId } = await params;
   const locale: Locale = user.locale;
   const t = getDictionary(locale).projectDetail;
+  const copy = getDictionary(locale).common;
 
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId: user.id, deletedAt: null },
@@ -72,7 +74,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     <main className="mx-auto max-w-6xl px-6 py-8">
       <header className="mb-6">
         <p className="text-sm text-[#666]">{project.id}</p>
-        <h1 className="mt-1 text-3xl font-semibold">{project.title}</h1>
+        <div className="mt-1 flex items-start justify-between gap-4">
+          <h1 className="text-3xl font-semibold">{project.title}</h1>
+          <CopyButton
+            labels={copy}
+            className="mt-1 shrink-0 rounded border border-[#dedbd2] px-3 py-1 text-xs text-[#1d1d1b]"
+            value={[project.title, project.genre, project.premise].filter(Boolean).join("\n")}
+          />
+        </div>
         {project.genre ? <p className="mt-2 text-sm text-[#315247]">{project.genre}</p> : null}
         {project.premise ? <p className="mt-4 max-w-3xl text-sm leading-6 text-[#555]">{project.premise}</p> : null}
       </header>
