@@ -21,6 +21,32 @@ export default async function StoryStatePage({ params }: { params: Promise<{ pro
     orderBy: { createdAt: "desc" },
   });
 
+  async function createStoryState(formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.project.findFirst({
+      where: { id: projectId, userId: currentUser.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const input = createStoryStateSnapshotSchema.parse({
+      summary: String(formData.get("summary") ?? "").trim(),
+      recentEvents: String(formData.get("recentEvents") ?? "").trim() || undefined,
+      characterStates: String(formData.get("characterStates") ?? "").trim() || undefined,
+      unresolvedProblems: String(formData.get("unresolvedProblems") ?? "").trim() || undefined,
+      unresolvedForeshadowings: String(formData.get("unresolvedForeshadowings") ?? "").trim() || undefined,
+      activePlotThreads: String(formData.get("activePlotThreads") ?? "").trim() || undefined,
+      nextOptions: String(formData.get("nextOptions") ?? "").trim() || undefined,
+      avoidElements: String(formData.get("avoidElements") ?? "").trim() || undefined,
+      writingRules: String(formData.get("writingRules") ?? "").trim() || undefined,
+      userPreferences: String(formData.get("userPreferences") ?? "").trim() || undefined,
+    });
+    await prisma.storyStateSnapshot.create({ data: { ...input, projectId } });
+    redirect(`/projects/${projectId}/story-state`);
+  }
+
   async function updateLatestStoryState(id: string, formData: FormData) {
     "use server";
 
@@ -57,6 +83,30 @@ export default async function StoryStatePage({ params }: { params: Promise<{ pro
         </Link>
       </div>
       <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.description}</p>
+      <details className="mb-6 rounded border bg-white p-4" open={snapshots.length === 0}>
+        <summary className="cursor-pointer text-sm font-medium">{t.addNew}</summary>
+        <h2 className="mb-3 mt-4 font-semibold">{t.createHeading}</h2>
+        <form className="space-y-4" action={createStoryState}>
+          {[
+            { name: "summary", label: t.summaryLabel, required: true },
+            { name: "recentEvents", label: t.recentEventsFormLabel },
+            { name: "characterStates", label: t.characterStatesLabel },
+            { name: "unresolvedProblems", label: t.unresolvedProblemsLabel },
+            { name: "unresolvedForeshadowings", label: t.unresolvedForeshadowingsLabel },
+            { name: "activePlotThreads", label: t.activePlotThreadsLabel },
+            { name: "nextOptions", label: t.nextOptionsFormLabel },
+            { name: "avoidElements", label: t.avoidElementsLabel },
+            { name: "writingRules", label: t.writingRulesLabel },
+            { name: "userPreferences", label: t.userPreferencesLabel },
+          ].map((field) => (
+            <label className="block" key={field.name}>
+              <span className="text-sm font-medium">{field.label}</span>
+              <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name={field.name} required={field.required} />
+            </label>
+          ))}
+          <button className="rounded bg-black px-4 py-2 text-sm text-white" type="submit">{t.create}</button>
+        </form>
+      </details>
       {snapshots.length === 0 ? (
         <p className="text-sm text-[#555]">{t.empty}</p>
       ) : (
