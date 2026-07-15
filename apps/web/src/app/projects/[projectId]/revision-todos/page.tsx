@@ -24,6 +24,27 @@ export default async function RevisionTodosPage({ params }: { params: Promise<{ 
     orderBy: { updatedAt: "desc" },
   });
 
+  async function createRevisionTodo(formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.project.findFirst({
+      where: { id: projectId, userId: currentUser.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const input = createRevisionTodoSchema.parse({
+      title: String(formData.get("title") ?? "").trim(),
+      problem: String(formData.get("problem") ?? "").trim(),
+      suggestion: String(formData.get("suggestion") ?? "").trim() || undefined,
+      status: String(formData.get("status") ?? "") || undefined,
+      priority: String(formData.get("priority") ?? "") || undefined,
+    });
+    await prisma.revisionTodo.create({ data: { ...input, projectId } });
+    redirect(`/projects/${projectId}/revision-todos`);
+  }
+
   async function updateRevisionTodo(id: string, formData: FormData) {
     "use server";
 
@@ -54,6 +75,36 @@ export default async function RevisionTodosPage({ params }: { params: Promise<{ 
         </Link>
       </div>
       <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.description}</p>
+      <details className="mb-6 rounded border bg-white p-4">
+        <summary className="cursor-pointer text-sm font-medium">{t.addNew}</summary>
+        <form className="mt-4 space-y-4" action={createRevisionTodo}>
+          <label className="block">
+            <span className="text-sm font-medium">{t.titleLabel}</span>
+            <input className="mt-1 w-full rounded border px-3 py-2" name="title" required />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.problemLabel}</span>
+            <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name="problem" required />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.suggestionFormLabel}</span>
+            <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="suggestion" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.statusLabel}</span>
+            <select className="mt-1 w-full rounded border px-3 py-2" name="status" defaultValue="OPEN">
+              {statuses.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.priorityFormLabel}</span>
+            <select className="mt-1 w-full rounded border px-3 py-2" name="priority" defaultValue="MEDIUM">
+              {priorities.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <button className="rounded bg-black px-4 py-2 text-sm text-white" type="submit">{t.create}</button>
+        </form>
+      </details>
       {revisionTodos.length === 0 ? (
         <p className="text-sm text-[#555]">{t.empty}</p>
       ) : (

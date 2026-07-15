@@ -24,6 +24,27 @@ export default async function ForeshadowingsPage({ params }: { params: Promise<{
     orderBy: { updatedAt: "desc" },
   });
 
+  async function createForeshadowing(formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.project.findFirst({
+      where: { id: projectId, userId: currentUser.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const input = createForeshadowingSchema.parse({
+      title: String(formData.get("title") ?? "").trim(),
+      description: String(formData.get("description") ?? "").trim(),
+      plannedResolution: String(formData.get("plannedResolution") ?? "").trim() || undefined,
+      status: String(formData.get("status") ?? "") || undefined,
+      importance: String(formData.get("importance") ?? "") || undefined,
+    });
+    await prisma.foreshadowing.create({ data: { ...input, projectId } });
+    redirect(`/projects/${projectId}/foreshadowings`);
+  }
+
   async function updateForeshadowing(id: string, formData: FormData) {
     "use server";
 
@@ -54,6 +75,36 @@ export default async function ForeshadowingsPage({ params }: { params: Promise<{
         </Link>
       </div>
       <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.description}</p>
+      <details className="mb-6 rounded border bg-white p-4">
+        <summary className="cursor-pointer text-sm font-medium">{t.addNew}</summary>
+        <form className="mt-4 space-y-4" action={createForeshadowing}>
+          <label className="block">
+            <span className="text-sm font-medium">{t.titleLabel}</span>
+            <input className="mt-1 w-full rounded border px-3 py-2" name="title" required />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name="description" required />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.plannedResolutionLabel}</span>
+            <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="plannedResolution" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.statusLabel}</span>
+            <select className="mt-1 w-full rounded border px-3 py-2" name="status" defaultValue="UNPLANTED">
+              {statuses.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.importanceLabel}</span>
+            <select className="mt-1 w-full rounded border px-3 py-2" name="importance" defaultValue="MEDIUM">
+              {importances.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <button className="rounded bg-black px-4 py-2 text-sm text-white" type="submit">{t.create}</button>
+        </form>
+      </details>
       {foreshadowings.length === 0 ? (
         <p className="text-sm text-[#555]">{t.empty}</p>
       ) : (

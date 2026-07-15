@@ -51,6 +51,10 @@ export async function GET(req: NextRequest) {
       },
     },
     paths: {
+      "/api/mcp/help": action({
+        operationId: "help",
+        text: "はじめての人向けに、この API の使い方・基本的な流れ・各操作の概要を返す(認証トークンがあれば projectId 不要で呼べる)",
+      }),
       "/api/mcp/list-private-projects": action({ operationId: "listPrivateProjects", text: "非公開作品一覧を取得する" }),
       "/api/mcp/create-private-project": action(
         { operationId: "createPrivateProject", text: "新しい非公開作品を作成する" },

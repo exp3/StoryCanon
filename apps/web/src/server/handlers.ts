@@ -538,8 +538,109 @@ async function rollbackCommand(actor: CurrentActor, body: Body) {
   });
 }
 
+function mcpHelp(locale: string | null | undefined) {
+  if (locale === "en") {
+    return {
+      title: "StoryCanon MCP API — Getting Started",
+      overview:
+        "This API lets ChatGPT read and write your private StoryCanon works (scenes, characters, world notes, foreshadowing, plot threads, TODOs, and the latest story state). Every request needs the Bearer token you issue at /settings.",
+      firstTimeSteps: [
+        "1. Issue an API token in StoryCanon under Settings, and set it as the Bearer token for this action.",
+        "2. Call listPrivateProjects to see your works and their projectId (create one with createPrivateProject if you have none).",
+        "3. Before writing, call getPrivateProjectContext with the projectId to load the latest story state, characters, active plot threads, and unresolved foreshadowing.",
+        "4. Generate a scene, then save it with saveGeneratedScene.",
+        "5. After writing, keep the canon in sync: saveStoryStateSnapshot for the latest story state, and saveForeshadowing / savePlotThread / saveRevisionTodo as needed.",
+      ],
+      typicalLoop:
+        "getPrivateProjectContext → (generate) → saveGeneratedScene → saveStoryStateSnapshot → repeat. Made a mistake? undoLastCommand reverts your most recent change.",
+      operations: {
+        projects: {
+          listPrivateProjects: "List your works with their projectId.",
+          createPrivateProject: "Create a new work (only title is required).",
+          updatePrivateProject: "Update a work's title or settings (genre, premise, tone, etc.).",
+          consultTitle: "Get context and guidance for brainstorming title ideas.",
+        },
+        context: {
+          getPrivateProjectContext: "Load the current state: summary, characters, foreshadowing, active plot threads.",
+          getNextGenerationContext: "Same content as getPrivateProjectContext, for the next generation step.",
+        },
+        writing: {
+          saveGeneratedScene: "Save generated body text as a scene (projectId and body required).",
+          saveCharacter: "Create or update a character.",
+          saveCharacterNote: "Save a character note (unknown character names are auto-created).",
+          saveWorldNote: "Save a world-building note.",
+          saveForeshadowing: "Save a piece of foreshadowing.",
+          savePlotThread: "Save an active plot thread.",
+          saveRevisionTodo: "Save a revision TODO.",
+          saveStoryStateSnapshot: "Save the latest story state (summary required).",
+        },
+        maintenance: {
+          deleteProjectData: "Soft-delete data under a work (never a hard delete).",
+          undoLastCommand: "Undo the most recent operation.",
+          rollbackCommand: "Undo a specific save/update/delete by its commandId or transactionId.",
+        },
+      },
+      tips: [
+        "projectId is required for every operation except listPrivateProjects, createPrivateProject, and help.",
+        "Most write operations return a commandId — pass it to rollbackCommand to undo just that change.",
+        "Deletes are logical (soft) deletes, so they can be undone.",
+      ],
+    };
+  }
+  return {
+    title: "StoryCanon MCP API — はじめかた",
+    overview:
+      "この API を使うと、ChatGPT から StoryCanon の非公開作品(シーン本文・キャラクター・世界観・伏線・プロット・TODO・物語の最新状態)を読み書きできます。各リクエストには /settings で発行した Bearer トークンが必要です。",
+    firstTimeSteps: [
+      "1. StoryCanon の設定画面で API トークンを発行し、このアクションの Bearer トークンに設定する。",
+      "2. listPrivateProjects を呼んで作品一覧と projectId を確認する(作品が無ければ createPrivateProject で作成)。",
+      "3. 執筆前に getPrivateProjectContext を projectId 付きで呼び、物語の最新状態・キャラクター・進行中プロット・未回収の伏線を読み込む。",
+      "4. シーンを生成したら saveGeneratedScene で保存する。",
+      "5. 執筆後は設定を最新化する: saveStoryStateSnapshot で物語の最新状態を保存し、必要に応じて saveForeshadowing / savePlotThread / saveRevisionTodo を使う。",
+    ],
+    typicalLoop:
+      "getPrivateProjectContext →(生成)→ saveGeneratedScene → saveStoryStateSnapshot を繰り返します。間違えたときは undoLastCommand で直前の操作を取り消せます。",
+    operations: {
+      projects: {
+        listPrivateProjects: "作品一覧と projectId を取得する。",
+        createPrivateProject: "新しい作品を作成する(必須は title のみ)。",
+        updatePrivateProject: "作品のタイトルや設定(ジャンル・前提・トーン等)を更新する。",
+        consultTitle: "タイトル案を相談するためのコンテキストと指針を取得する。",
+      },
+      context: {
+        getPrivateProjectContext: "現在状態(要約・キャラ・伏線・進行中プロット)を取得する。",
+        getNextGenerationContext: "getPrivateProjectContext と同じ内容(次回生成用)。",
+      },
+      writing: {
+        saveGeneratedScene: "生成した本文をシーンとして保存する(projectId と body が必須)。",
+        saveCharacter: "キャラクターを新規登録または更新する。",
+        saveCharacterNote: "キャラクターメモを保存する(存在しないキャラ名は自動作成)。",
+        saveWorldNote: "世界観メモを保存する。",
+        saveForeshadowing: "伏線を保存する。",
+        savePlotThread: "進行中プロットを保存する。",
+        saveRevisionTodo: "修正TODOを保存する。",
+        saveStoryStateSnapshot: "物語の最新状態を保存する(summary が必須)。",
+      },
+      maintenance: {
+        deleteProjectData: "作品配下のデータを論理削除する(物理削除は行わない)。",
+        undoLastCommand: "直前の操作を取り消す。",
+        rollbackCommand: "commandId または transactionId を指定して特定の保存・更新・削除を取り消す。",
+      },
+    },
+    tips: [
+      "projectId は listPrivateProjects・createPrivateProject・help 以外のすべての操作で必須です。",
+      "多くの書き込み操作は commandId を返します。rollbackCommand に渡すとその変更だけを取り消せます。",
+      "削除は論理削除なので、後から取り消せます。",
+    ],
+  };
+}
+
 export async function handleMcpApi(action: string, actor: CurrentActor, body: Body) {
   try {
+    if (action === "help") {
+      const user = await prisma.user.findUnique({ where: { id: actor.userId }, select: { locale: true } });
+      return json({ help: mcpHelp(user?.locale) });
+    }
     if (action === "list-private-projects") {
       const projects = await prisma.project.findMany({
         where: { userId: actor.userId, deletedAt: null },

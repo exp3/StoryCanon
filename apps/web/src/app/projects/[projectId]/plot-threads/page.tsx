@@ -23,6 +23,27 @@ export default async function PlotThreadsPage({ params }: { params: Promise<{ pr
     orderBy: { updatedAt: "desc" },
   });
 
+  async function createPlotThread(formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    const owned = await prisma.project.findFirst({
+      where: { id: projectId, userId: currentUser.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!owned) notFound();
+
+    const input = createPlotThreadSchema.parse({
+      title: String(formData.get("title") ?? "").trim(),
+      description: String(formData.get("description") ?? "").trim() || undefined,
+      currentState: String(formData.get("currentState") ?? "").trim() || undefined,
+      resolutionCondition: String(formData.get("resolutionCondition") ?? "").trim() || undefined,
+      status: String(formData.get("status") ?? "") || undefined,
+    });
+    await prisma.plotThread.create({ data: { ...input, projectId } });
+    redirect(`/projects/${projectId}/plot-threads`);
+  }
+
   async function updatePlotThread(id: string, formData: FormData) {
     "use server";
 
@@ -53,6 +74,34 @@ export default async function PlotThreadsPage({ params }: { params: Promise<{ pr
         </Link>
       </div>
       <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.description}</p>
+      <details className="mb-6 rounded border bg-white p-4">
+        <summary className="cursor-pointer text-sm font-medium">{t.addNew}</summary>
+        <form className="mt-4 space-y-4" action={createPlotThread}>
+          <label className="block">
+            <span className="text-sm font-medium">{t.titleLabel}</span>
+            <input className="mt-1 w-full rounded border px-3 py-2" name="title" required />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name="description" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.currentStateFormLabel}</span>
+            <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="currentState" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.resolutionConditionLabel}</span>
+            <textarea className="mt-1 min-h-20 w-full rounded border px-3 py-2" name="resolutionCondition" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">{t.statusLabel}</span>
+            <select className="mt-1 w-full rounded border px-3 py-2" name="status" defaultValue="NOT_STARTED">
+              {statuses.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <button className="rounded bg-black px-4 py-2 text-sm text-white" type="submit">{t.create}</button>
+        </form>
+      </details>
       {plotThreads.length === 0 ? (
         <p className="text-sm text-[#555]">{t.empty}</p>
       ) : (
