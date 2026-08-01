@@ -36,8 +36,10 @@ jobs:
       APP_API_TOKEN_PEPPER: ${{ secrets.APP_API_TOKEN_PEPPER }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      STRIPE_PRICE_PLUS: ${{ vars.STRIPE_PRICE_PLUS }}
-      STRIPE_PRICE_PRO: ${{ vars.STRIPE_PRICE_PRO }}
+      STRIPE_PRICE_PLUS_MONTHLY: ${{ vars.STRIPE_PRICE_PLUS_MONTHLY }}
+      STRIPE_PRICE_PLUS_YEARLY: ${{ vars.STRIPE_PRICE_PLUS_YEARLY }}
+      STRIPE_PRICE_PRO_MONTHLY: ${{ vars.STRIPE_PRICE_PRO_MONTHLY }}
+      STRIPE_PRICE_PRO_YEARLY: ${{ vars.STRIPE_PRICE_PRO_YEARLY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,6 +58,9 @@ jobs:
 
       - name: Build infra
         run: npm run build -w infra
+
+      - name: Run unit tests
+        run: npm run test -w apps/web
 
       - name: Run integration tests
         run: npm run test:integration

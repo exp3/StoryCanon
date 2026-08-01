@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ContactForm } from "./contact-form";
 import { legalInfo } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
@@ -22,7 +21,14 @@ export default function ContactPage() {
       </p>
 
       <div className="mt-6">
-        <ContactForm />
+        <a
+          className="inline-block rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white"
+          href={legalInfo.contactFormUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          お問い合わせフォームを開く
+        </a>
       </div>
 
       <p className="mt-6 text-sm text-[#6b6b63]">

@@ -24,10 +24,15 @@ export interface ComputeStackProps extends cdk.StackProps {
   bakeTimeMinutes?: number;
   /** Container PAYMENT_MODE. Defaults to "mock" so live billing is never enabled by accident. */
   paymentMode?: string;
-  stripePricePlus?: string;
-  stripePricePro?: string;
+  /** Stripe Price IDs per plan and billing interval (see apps/web/src/lib/stripe.ts). */
+  stripePricePlusMonthly?: string;
+  stripePricePlusYearly?: string;
+  stripePriceProMonthly?: string;
+  stripePriceProYearly?: string;
   /** Comma-separated admin email allowlist injected as ADMIN_EMAILS. Defaults to the primary operator in bin/storycanon.ts. */
   adminEmails?: string;
+  /** Google Analytics measurement id (e.g. "G-XXXXXXX"), injected as NEXT_PUBLIC_GA_ID. Read server-side at runtime by legal-info.ts, so no image rebuild is needed to change it. */
+  gaMeasurementId?: string;
   /**
    * When both are set, the ALB serves production over HTTPS with an ACM cert
    * (DNS-validated in the zone) and redirects :80 -> :443. Without them the
@@ -118,9 +123,12 @@ export class ComputeStack extends cdk.Stack {
         DATABASE_HOST: props.database.endpointAddress,
         DATABASE_PORT: props.database.endpointPort,
         EXPORT_BUCKET_NAME: props.storage.exportBucket.bucketName,
-        STRIPE_PRICE_PLUS: props.stripePricePlus ?? "",
-        STRIPE_PRICE_PRO: props.stripePricePro ?? "",
+        STRIPE_PRICE_PLUS_MONTHLY: props.stripePricePlusMonthly ?? "",
+        STRIPE_PRICE_PLUS_YEARLY: props.stripePricePlusYearly ?? "",
+        STRIPE_PRICE_PRO_MONTHLY: props.stripePriceProMonthly ?? "",
+        STRIPE_PRICE_PRO_YEARLY: props.stripePriceProYearly ?? "",
         ADMIN_EMAILS: props.adminEmails ?? "",
+        NEXT_PUBLIC_GA_ID: props.gaMeasurementId ?? "",
       },
       secrets: Object.fromEntries(
         Object.entries(props.secrets.appSecrets).map(([name, secret]) => [
