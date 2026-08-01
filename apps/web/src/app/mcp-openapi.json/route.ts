@@ -177,6 +177,19 @@ export async function GET(req: NextRequest) {
         },
         ["projectId", "title", "description"]
       ),
+      "/api/mcp/save-mystery": action(
+        { operationId: "saveMystery", text: "ミステリー(謎)を保存する" },
+        {
+          ...projectIdProp,
+          scope: { type: "string", enum: ["CENTRAL", "ARC", "EPISODE", "SCENE"] },
+          question: { type: "string" },
+          truth: { type: "string" },
+          knownBy: { type: "string" },
+          clues: { type: "string" },
+          revealPoint: { type: "string" },
+        },
+        ["projectId", "question"]
+      ),
       "/api/mcp/save-plot-thread": action(
         { operationId: "savePlotThread", text: "進行中プロットを保存する" },
         {
@@ -235,6 +248,7 @@ export async function GET(req: NextRequest) {
               "CHARACTER_NOTE",
               "WORLD_NOTE",
               "FORESHADOWING",
+              "MYSTERY",
               "PLOT_THREAD",
               "REVISION_TODO",
               "STORY_STATE_SNAPSHOT",

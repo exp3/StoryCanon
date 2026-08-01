@@ -5,6 +5,7 @@ export type CountLimitKind =
   | "charactersPerProject"
   | "worldNotesPerProject"
   | "foreshadowingsPerProject"
+  | "mysteriesPerProject"
   | "plotThreadsPerProject"
   | "revisionTodosPerProject"
   | "storySnapshotsPerProject";
@@ -16,6 +17,7 @@ export const PLAN_LIMITS = {
     bodyCharsPerProject: 20000,
     worldNotesPerProject: 30,
     foreshadowingsPerProject: 30,
+    mysteriesPerProject: 30,
     plotThreadsPerProject: 30,
     revisionTodosPerProject: 50,
     storySnapshotsPerProject: 10,
@@ -26,6 +28,7 @@ export const PLAN_LIMITS = {
     bodyCharsPerProject: 100000,
     worldNotesPerProject: 200,
     foreshadowingsPerProject: 100,
+    mysteriesPerProject: 100,
     plotThreadsPerProject: 100,
     revisionTodosPerProject: 300,
     storySnapshotsPerProject: 100,
@@ -36,6 +39,7 @@ export const PLAN_LIMITS = {
     bodyCharsPerProject: 1000000,
     worldNotesPerProject: 2000,
     foreshadowingsPerProject: 1000,
+    mysteriesPerProject: 1000,
     plotThreadsPerProject: 1000,
     revisionTodosPerProject: 3000,
     storySnapshotsPerProject: 1000,
@@ -91,6 +95,7 @@ export async function assertCountLimit(projectId: string, kind: CountLimitKind) 
   if (kind === "charactersPerProject") current = await prisma.character.count({ where: { projectId, deletedAt: null } });
   if (kind === "worldNotesPerProject") current = await prisma.worldNote.count({ where: { projectId, deletedAt: null } });
   if (kind === "foreshadowingsPerProject") current = await prisma.foreshadowing.count({ where: { projectId, deletedAt: null } });
+  if (kind === "mysteriesPerProject") current = await prisma.mystery.count({ where: { projectId, deletedAt: null } });
   if (kind === "plotThreadsPerProject") current = await prisma.plotThread.count({ where: { projectId, deletedAt: null } });
   if (kind === "revisionTodosPerProject") current = await prisma.revisionTodo.count({ where: { projectId, deletedAt: null } });
   if (kind === "storySnapshotsPerProject") current = await prisma.storyStateSnapshot.count({ where: { projectId, deletedAt: null } });

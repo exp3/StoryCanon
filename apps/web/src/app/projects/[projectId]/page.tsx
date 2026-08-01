@@ -15,6 +15,7 @@ function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
     { label: t.tabCharacters, href: `/projects/${projectId}#characters` },
     { label: t.tabWorldNotes, href: `/projects/${projectId}#world-notes` },
     { label: t.tabForeshadowings, href: `/projects/${projectId}/foreshadowings` },
+    { label: t.tabMysteries, href: `/projects/${projectId}/mysteries` },
     { label: t.tabPlotThreads, href: `/projects/${projectId}/plot-threads` },
     { label: t.tabRevisionTodos, href: `/projects/${projectId}/revision-todos` },
     { label: t.tabStoryState, href: `/projects/${projectId}/story-state` },
@@ -59,6 +60,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           characters: true,
           worldNotes: true,
           foreshadowings: true,
+          mysteries: true,
           plotThreads: true,
           revisionTodos: true,
         },
@@ -219,6 +221,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <section className="grid gap-4 md:grid-cols-3">
             {[
               { label: t.statForeshadowings, value: project._count.foreshadowings, href: `/projects/${project.id}/foreshadowings` },
+              { label: t.statMysteries, value: project._count.mysteries, href: `/projects/${project.id}/mysteries` },
               { label: t.statPlotThreads, value: project._count.plotThreads, href: `/projects/${project.id}/plot-threads` },
               { label: t.statRevisionTodos, value: project._count.revisionTodos, href: `/projects/${project.id}/revision-todos` },
             ].map((item) => (
