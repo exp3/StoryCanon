@@ -26,6 +26,8 @@ export interface ComputeStackProps extends cdk.StackProps {
   paymentMode?: string;
   stripePricePlus?: string;
   stripePricePro?: string;
+  /** Comma-separated admin email allowlist injected as ADMIN_EMAILS. Defaults to the primary operator in bin/storycanon.ts. */
+  adminEmails?: string;
   /**
    * When both are set, the ALB serves production over HTTPS with an ACM cert
    * (DNS-validated in the zone) and redirects :80 -> :443. Without them the
@@ -118,6 +120,7 @@ export class ComputeStack extends cdk.Stack {
         EXPORT_BUCKET_NAME: props.storage.exportBucket.bucketName,
         STRIPE_PRICE_PLUS: props.stripePricePlus ?? "",
         STRIPE_PRICE_PRO: props.stripePricePro ?? "",
+        ADMIN_EMAILS: props.adminEmails ?? "",
       },
       secrets: Object.fromEntries(
         Object.entries(props.secrets.appSecrets).map(([name, secret]) => [
