@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getStripe, PLAN_PRICE_IDS } from "@/lib/stripe";
+import { getStripe, planFromPriceId } from "@/lib/stripe";
 
 const STATUS_MAP: Record<Stripe.Subscription.Status, "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED" | "INCOMPLETE"> = {
   active: "ACTIVE",
@@ -13,12 +13,6 @@ const STATUS_MAP: Record<Stripe.Subscription.Status, "ACTIVE" | "TRIALING" | "PA
   unpaid: "PAST_DUE",
   paused: "CANCELED",
 };
-
-function planFromPriceId(priceId: string | undefined) {
-  if (priceId === PLAN_PRICE_IDS.PRO) return "PRO" as const;
-  if (priceId === PLAN_PRICE_IDS.PLUS) return "PLUS" as const;
-  return null;
-}
 
 async function syncSubscription(subscription: Stripe.Subscription, userIdHint?: string) {
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
@@ -49,6 +43,13 @@ async function syncSubscription(subscription: Stripe.Subscription, userIdHint?: 
   }
 }
 
+/**
+ * Deliberately NOT gated on PAYMENT_MODE (see lib/billing-config.ts). The kill
+ * switch stops the app from *starting* charges; this route only reacts to
+ * events Stripe already accepted, and signature verification below is its real
+ * control. Blocking it while customers hold live subscriptions would let their
+ * cancellations and payment failures go unrecorded, stranding paid access.
+ */
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {

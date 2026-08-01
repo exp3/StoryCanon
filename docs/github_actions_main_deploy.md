@@ -43,10 +43,14 @@ Because the service update is done with a new image tag and ECS Express deployme
 - `ECS_RECREATE_SERVICE`
   - `true` or `false`
   - Use `true` only when immutable ECS Express settings must be recreated
-- `STRIPE_PRICE_PLUS`
-  - Stripe Price ID for the Plus plan monthly subscription
-- `STRIPE_PRICE_PRO`
-  - Stripe Price ID for the Pro plan monthly subscription
+- `STRIPE_PRICE_PLUS_MONTHLY`
+  - Stripe Price ID for the Plus plan, monthly billing
+- `STRIPE_PRICE_PLUS_YEARLY`
+  - Stripe Price ID for the Plus plan, yearly billing
+- `STRIPE_PRICE_PRO_MONTHLY`
+  - Stripe Price ID for the Pro plan, monthly billing
+- `STRIPE_PRICE_PRO_YEARLY`
+  - Stripe Price ID for the Pro plan, yearly billing
 
 ## Required GitHub repository secrets
 

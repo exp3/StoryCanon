@@ -3,7 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getStripe, PLAN_PRICE_IDS, type PaidPlan } from "@/lib/stripe";
+import { isBillingLive } from "@/lib/billing-config";
+import { getPlanPriceId, getStripe, isBillingInterval, type PaidPlan } from "@/lib/stripe";
 import { requireSessionUser } from "@/server/session";
 
 async function getOrigin() {
@@ -42,11 +43,18 @@ export async function createCheckoutSession(formData: FormData) {
     throw new Error("Invalid plan.");
   }
 
-  if (!process.env.STRIPE_SECRET_KEY) {
+  const interval = String(formData.get("interval") ?? "monthly");
+  if (!isBillingInterval(interval)) {
+    throw new Error("Invalid billing interval.");
+  }
+
+  // The real control point for live billing — the settings UI also hides the
+  // purchase forms, but that is cosmetic and this action is directly callable.
+  if (!isBillingLive()) {
     redirect("/settings?billing=not-configured");
   }
 
-  const priceId = PLAN_PRICE_IDS[plan as PaidPlan];
+  const priceId = getPlanPriceId(plan as PaidPlan, interval);
   if (!priceId) {
     redirect("/settings?billing=not-configured");
   }
@@ -61,8 +69,8 @@ export async function createCheckoutSession(formData: FormData) {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
     cancel_url: `${origin}/settings?billing=cancelled`,
-    metadata: { userId: user.id, plan },
-    subscription_data: { metadata: { userId: user.id, plan } },
+    metadata: { userId: user.id, plan, interval },
+    subscription_data: { metadata: { userId: user.id, plan, interval } },
   });
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
@@ -72,7 +80,9 @@ export async function createCheckoutSession(formData: FormData) {
 export async function createBillingPortalSession() {
   const user = await requireSessionUser("/settings");
 
-  if (!process.env.STRIPE_SECRET_KEY) {
+  // The portal can cancel and switch subscriptions, so it is gated as tightly
+  // as checkout itself.
+  if (!isBillingLive()) {
     redirect("/settings?billing=not-configured");
   }
 

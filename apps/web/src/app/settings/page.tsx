@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { CopyButton } from "@/components/copy-button";
+import { isBillingLive } from "@/lib/billing-config";
 import { getDictionary, localeTag } from "@/lib/i18n";
 import { PLAN_LIMITS } from "@/server/plan";
 import { requireSessionUser } from "@/server/session";
@@ -41,6 +42,21 @@ export default async function SettingsPage({
   ];
   // JSON export is the only non-numeric plan gate (see server/plan.ts and export/page.tsx).
   const jsonExportByPlan: Record<(typeof comparePlans)[number], boolean> = { FREE: false, PLUS: true, PRO: true };
+  // Tax-included figures satisfy Japan's 総額表示 and must stay in sync with the
+  // 特定商取引法 page (lib/legal-info.ts). Yearly is priced at 10x monthly.
+  const planPricing = {
+    PLUS: { monthly: { incl: "$9.90", excl: "$9" }, yearly: { incl: "$99", excl: "$90" } },
+    PRO: { monthly: { incl: "$52.80", excl: "$48" }, yearly: { incl: "$528", excl: "$480" } },
+  } as const;
+  const upgradeLabels = { PLUS: t.upgradeToPlus, PRO: t.upgradeToPro };
+  // Only offer what would actually be an upgrade: Free sees both, Plus sees Pro.
+  // With the billing kill switch off (lib/billing-config.ts) nothing is
+  // purchasable, so the forms give way to a "coming soon" notice. The plan
+  // comparison table stays visible either way.
+  const billingLive = isBillingLive();
+  const purchasablePlans = !billingLive
+    ? []
+    : (["PLUS", "PRO"] as const).filter((p) => (p === "PLUS" ? plan === "FREE" : plan !== "PRO"));
   const statusSuffix =
     subscription?.status === "PAST_DUE" ? ` ${t.statusPastDue}` : subscription?.status === "CANCELED" ? ` ${t.statusCanceled}` : "";
 
@@ -73,32 +89,6 @@ export default async function SettingsPage({
           {t.currentPlanLabel}: <span className="font-medium text-[#1d1d1b]">{planLabel}</span>
           {statusSuffix}
         </p>
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded border border-[#dedbd2] bg-[#f7f7f4] p-3">
-            <p className="font-medium text-[#1d1d1b]">Plus</p>
-            <p className="mt-1 text-sm text-[#4b4b45]">
-              $9 / {user.locale === "ja" ? "月（税抜）" : "month (excluding tax)"}
-              <br />
-              $9.90 / {user.locale === "ja" ? "月（税込）" : "month (including tax)"}
-              <br />
-              $90 / {user.locale === "ja" ? "年（税抜）" : "year (excluding tax)"}
-              <br />
-              $99 / {user.locale === "ja" ? "年（税込）" : "year (including tax)"}
-            </p>
-          </div>
-          <div className="rounded border border-[#dedbd2] bg-[#f7f7f4] p-3">
-            <p className="font-medium text-[#1d1d1b]">Pro</p>
-            <p className="mt-1 text-sm text-[#4b4b45]">
-              $48 / {user.locale === "ja" ? "月（税抜）" : "month (excluding tax)"}
-              <br />
-              $52.80 / {user.locale === "ja" ? "月（税込）" : "month (including tax)"}
-              <br />
-              $480 / {user.locale === "ja" ? "年（税抜）" : "year (excluding tax)"}
-              <br />
-              $528 / {user.locale === "ja" ? "年（税込）" : "year (including tax)"}
-            </p>
-          </div>
-        </div>
         <h3 className="mb-2 text-sm font-semibold text-[#1d1d1b]">{t.compareHeading}</h3>
         <div className="mb-4 overflow-x-auto rounded border border-[#dedbd2] bg-white">
           <table className="w-full text-sm">
@@ -158,24 +148,73 @@ export default async function SettingsPage({
             </tbody>
           </table>
         </div>
+        {!billingLive ? (
+          <p className="mb-4 rounded border border-[#dedbd2] bg-[#f7f7f4] p-3 text-sm text-[#4b4b45]">
+            {t.billingComingSoon}
+          </p>
+        ) : null}
+        {purchasablePlans.length > 0 ? (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            {purchasablePlans.map((p) => (
+              <form
+                key={p}
+                action={createCheckoutSession}
+                className="rounded border border-[#dedbd2] bg-[#f7f7f4] p-4"
+              >
+                <input type="hidden" name="plan" value={p} />
+                <p className="font-medium text-[#1d1d1b]">{planLabels[p]}</p>
+                <fieldset className="mt-3">
+                  <legend className="sr-only">{t.intervalLegend}</legend>
+                  <div className="flex flex-col gap-2">
+                    {(["monthly", "yearly"] as const).map((interval) => (
+                      <label
+                        key={interval}
+                        className="flex cursor-pointer items-start gap-3 rounded border border-[#dedbd2] bg-white p-3 has-[:checked]:border-[#1d1d1b] has-[:checked]:ring-1 has-[:checked]:ring-[#1d1d1b]"
+                      >
+                        <input
+                          className="mt-1 accent-[#1d1d1b]"
+                          type="radio"
+                          name="interval"
+                          value={interval}
+                          defaultChecked={interval === "monthly"}
+                        />
+                        <span className="flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className="text-sm font-medium text-[#1d1d1b]">
+                              {interval === "monthly" ? t.intervalMonthly : t.intervalYearly}
+                            </span>
+                            {interval === "yearly" ? (
+                              <span className="rounded bg-[#e4ede7] px-1.5 py-0.5 text-[10px] text-[#2f4a40]">
+                                {t.yearlySavings}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="mt-1 block text-sm text-[#1d1d1b]">
+                            {planPricing[p][interval].incl}
+                            <span className="text-[#4b4b45]">
+                              {interval === "monthly" ? t.perMonth : t.perYear} {t.taxIncluded}
+                            </span>
+                          </span>
+                          <span className="block text-xs text-[#6b6b63]">
+                            {planPricing[p][interval].excl} {t.taxExcluded}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <button
+                  className="mt-3 w-full rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white"
+                  type="submit"
+                >
+                  {upgradeLabels[p]}
+                </button>
+              </form>
+            ))}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
-          {plan !== "PLUS" && plan !== "PRO" ? (
-            <form action={createCheckoutSession}>
-              <input type="hidden" name="plan" value="PLUS" />
-              <button className="rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white" type="submit">
-                {t.upgradeToPlus}
-              </button>
-            </form>
-          ) : null}
-          {plan !== "PRO" ? (
-            <form action={createCheckoutSession}>
-              <input type="hidden" name="plan" value="PRO" />
-              <button className="rounded bg-[#1d1d1b] px-4 py-2 text-sm text-white" type="submit">
-                {t.upgradeToPro}
-              </button>
-            </form>
-          ) : null}
-          {subscription?.stripeCustomerId ? (
+          {billingLive && subscription?.stripeCustomerId ? (
             <form action={createBillingPortalSession}>
               <button className="rounded border border-[#dedbd2] px-4 py-2 text-sm text-[#1d1d1b]" type="submit">
                 {t.manageBilling}
