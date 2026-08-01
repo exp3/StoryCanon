@@ -13,28 +13,33 @@ export const legalInfo = {
 
   // 事業者（個人事業主）
   operatorType: "個人事業主" as const,
-  operatorName: "【要確認：運営者氏名（個人事業主）】",
+  operatorName: "Softglow",
+  // 特商法上「運営統括責任者」は屋号ではなく個人事業主本人の実名を表示する。
+  operatorResponsibleName: "木村成孝",
   operatorTitle: "運営統括責任者",
-  // 個人事業主は「請求があれば遅滞なく開示」運用も可。公開する場合は文言を実値に置換。
-  address: "【要確認：所在地（郵便番号・住所）。もしくは「請求があった場合に遅滞なく開示します」】",
-  phone: "【要確認：電話番号。もしくは「請求があった場合に遅滞なく開示します」】",
+  // discloseOnRequest=true の間、所在地・電話番号は tokushoho ページでは
+  // 「請求があれば開示」文言に置き換わり未使用（下の値は将来 false にした際の控え）。
+  address: "",
+  phone: "",
   discloseOnRequest: true,
 
   // 連絡先
-  contactEmail: "【要確認：連絡先メールアドレス】",
+  contactEmail: "storycanon@softglow.jp",
   contactPath: "/contact",
+  contactFormUrl:
+    "https://docs.google.com/forms/d/e/1FAIpQLSfTu033SkU_8qcN8KrBLdl354gmcfmOREhWA_qSGp9gpExEEg/viewform?usp=header",
 
   // 規約・準拠法
   governingLaw: "日本法",
-  jurisdiction: "【要確認：合意管轄裁判所（例：東京地方裁判所）】",
+  jurisdiction: "東京地方裁判所",
 
-  // 料金（税込表示。実値に置換すること。決済は Stripe 上に最終金額を表示）
+  // 料金（税込表示。/settings の Plan & Billing セクションと同一の値。決済は Stripe 上に最終金額を表示）
   pricing: {
     currencyNote: "表示価格・課税区分の最終値は決済ページ（Stripe）に表示されます。",
-    plusMonthly: "【要確認：Plus 月額（税込）】",
-    plusYearly: "【要確認：Plus 年額（税込）】",
-    proMonthly: "【要確認：Pro 月額（税込）】",
-    proYearly: "【要確認：Pro 年額（税込）】",
+    plusMonthly: "$9.90",
+    plusYearly: "$99",
+    proMonthly: "$52.80",
+    proYearly: "$528",
   },
 
   // 解析

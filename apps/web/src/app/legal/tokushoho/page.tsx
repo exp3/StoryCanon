@@ -24,7 +24,7 @@ export default function TokushohoPage() {
     >
       <dl>
         <Row label="販売事業者">{legalInfo.operatorName}</Row>
-        <Row label="運営統括責任者">{legalInfo.operatorName}</Row>
+        <Row label="運営統括責任者">{legalInfo.operatorResponsibleName}</Row>
         <Row label="所在地">
           {legalInfo.discloseOnRequest ? onRequest : legalInfo.address}
         </Row>
