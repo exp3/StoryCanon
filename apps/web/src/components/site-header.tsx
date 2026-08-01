@@ -2,10 +2,12 @@ import Link from "next/link";
 import { signOut } from "@/auth";
 import { getDictionary } from "@/lib/i18n";
 import { getSessionUser } from "@/server/session";
+import { isAdminEmail } from "@/server/admin";
 
 export async function SiteHeader() {
   const user = await getSessionUser();
   const t = getDictionary(user?.locale ?? "en").header;
+  const showAdmin = isAdminEmail(user?.email);
 
   return (
     <header className="border-b border-[#dedbd2] bg-[#f7f7f4]">
@@ -20,6 +22,7 @@ export async function SiteHeader() {
               <Link href="/projects">{t.projects}</Link>
               <Link href="/projects/new">{t.newProject}</Link>
               <Link href="/settings">{t.settings}</Link>
+              {showAdmin ? <Link href="/admin">{t.admin}</Link> : null}
             </nav>
           ) : null}
         </div>
