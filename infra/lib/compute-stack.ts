@@ -28,6 +28,8 @@ export interface ComputeStackProps extends cdk.StackProps {
   stripePricePro?: string;
   /** Comma-separated admin email allowlist injected as ADMIN_EMAILS. Defaults to the primary operator in bin/storycanon.ts. */
   adminEmails?: string;
+  /** Google Analytics measurement id (e.g. "G-XXXXXXX"), injected as NEXT_PUBLIC_GA_ID. Read server-side at runtime by legal-info.ts, so no image rebuild is needed to change it. */
+  gaMeasurementId?: string;
   /**
    * When both are set, the ALB serves production over HTTPS with an ACM cert
    * (DNS-validated in the zone) and redirects :80 -> :443. Without them the
@@ -121,6 +123,7 @@ export class ComputeStack extends cdk.Stack {
         STRIPE_PRICE_PLUS: props.stripePricePlus ?? "",
         STRIPE_PRICE_PRO: props.stripePricePro ?? "",
         ADMIN_EMAILS: props.adminEmails ?? "",
+        NEXT_PUBLIC_GA_ID: props.gaMeasurementId ?? "",
       },
       secrets: Object.fromEntries(
         Object.entries(props.secrets.appSecrets).map(([name, secret]) => [

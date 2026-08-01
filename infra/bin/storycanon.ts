@@ -29,6 +29,7 @@ const paymentMode = app.node.tryGetContext("paymentMode") ?? process.env.PAYMENT
 const stripePricePlus = app.node.tryGetContext("stripePricePlus") ?? process.env.STRIPE_PRICE_PLUS ?? "";
 const stripePricePro = app.node.tryGetContext("stripePricePro") ?? process.env.STRIPE_PRICE_PRO ?? "";
 const adminEmails = app.node.tryGetContext("adminEmails") ?? process.env.ADMIN_EMAILS ?? "n.kimura@softglow.jp";
+const gaMeasurementId = app.node.tryGetContext("gaMeasurementId") ?? process.env.NEXT_PUBLIC_GA_ID ?? "";
 const hostedZoneName = app.node.tryGetContext("hostedZoneName") ?? process.env.HOSTED_ZONE_NAME;
 const appDomainName = app.node.tryGetContext("appDomainName") ?? process.env.APP_DOMAIN_NAME;
 
@@ -44,6 +45,7 @@ const compute = new ComputeStack(app, `${prefix}-app`, {
   stripePricePlus,
   stripePricePro,
   adminEmails,
+  gaMeasurementId,
   hostedZoneName,
   appDomainName,
 });
