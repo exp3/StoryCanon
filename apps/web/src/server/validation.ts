@@ -99,6 +99,12 @@ export const createRevisionTodoSchema = z.object({
   source: z.enum(["USER", "CHATGPT"]).default("USER"),
 });
 
+export const grantPlanSchema = z.object({
+  email: z.string().email().max(320),
+  plan: z.enum(["FREE", "PLUS", "PRO"]),
+  status: z.enum(["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED", "INCOMPLETE"]).default("ACTIVE"),
+});
+
 export const createStoryStateSnapshotSchema = z.object({
   summary: z.string().min(1).max(20000),
   recentEvents: z.string().max(20000).optional(),
