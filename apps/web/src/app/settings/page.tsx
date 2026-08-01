@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { CopyButton } from "@/components/copy-button";
 import { getDictionary, localeTag } from "@/lib/i18n";
+import { PLAN_LIMITS } from "@/server/plan";
 import { requireSessionUser } from "@/server/session";
 import { revokeApiToken, updateLocale } from "./actions";
 import { createBillingPortalSession, createCheckoutSession } from "./billing-actions";
@@ -24,7 +25,22 @@ export default async function SettingsPage({
     orderBy: { updatedAt: "desc" },
   });
   const plan = subscription && ["ACTIVE", "TRIALING"].includes(subscription.status) ? subscription.plan : "FREE";
-  const planLabel = { FREE: t.planFree, PLUS: t.planPlus, PRO: t.planPro }[plan];
+  const planLabels = { FREE: t.planFree, PLUS: t.planPlus, PRO: t.planPro };
+  const planLabel = planLabels[plan];
+  const comparePlans = ["FREE", "PLUS", "PRO"] as const;
+  const limitRows: { label: string; key: keyof typeof PLAN_LIMITS.FREE }[] = [
+    { label: t.limitProjects, key: "projects" },
+    { label: t.limitCharacters, key: "charactersPerProject" },
+    { label: t.limitBodyChars, key: "bodyCharsPerProject" },
+    { label: t.limitWorldNotes, key: "worldNotesPerProject" },
+    { label: t.limitForeshadowings, key: "foreshadowingsPerProject" },
+    { label: t.limitMysteries, key: "mysteriesPerProject" },
+    { label: t.limitPlotThreads, key: "plotThreadsPerProject" },
+    { label: t.limitRevisionTodos, key: "revisionTodosPerProject" },
+    { label: t.limitStorySnapshots, key: "storySnapshotsPerProject" },
+  ];
+  // JSON export is the only non-numeric plan gate (see server/plan.ts and export/page.tsx).
+  const jsonExportByPlan: Record<(typeof comparePlans)[number], boolean> = { FREE: false, PLUS: true, PRO: true };
   const statusSuffix =
     subscription?.status === "PAST_DUE" ? ` ${t.statusPastDue}` : subscription?.status === "CANCELED" ? ` ${t.statusCanceled}` : "";
 
@@ -82,6 +98,65 @@ export default async function SettingsPage({
               $528 / {user.locale === "ja" ? "年（税込）" : "year (including tax)"}
             </p>
           </div>
+        </div>
+        <h3 className="mb-2 text-sm font-semibold text-[#1d1d1b]">{t.compareHeading}</h3>
+        <div className="mb-4 overflow-x-auto rounded border border-[#dedbd2] bg-white">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#dedbd2] text-left text-[#4b4b45]">
+                <th className="px-4 py-2 font-medium">{t.compareFeatureCol}</th>
+                {comparePlans.map((p) => (
+                  <th
+                    key={p}
+                    className={`px-4 py-2 text-right font-medium ${
+                      p === plan ? "bg-[#f7f7f4] text-[#1d1d1b]" : ""
+                    }`}
+                  >
+                    {planLabels[p]}
+                    {p === plan ? (
+                      <span className="ml-1 rounded bg-[#1d1d1b] px-1.5 py-0.5 text-[10px] font-normal text-white">
+                        {t.compareCurrentBadge}
+                      </span>
+                    ) : null}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {limitRows.map((row) => (
+                <tr key={row.key} className="border-b border-[#ece8dd] last:border-0">
+                  <td className="px-4 py-2 text-[#4b4b45]">{row.label}</td>
+                  {comparePlans.map((p) => (
+                    <td
+                      key={p}
+                      className={`px-4 py-2 text-right tabular-nums ${
+                        p === plan ? "bg-[#f7f7f4] font-medium text-[#1d1d1b]" : "text-[#4b4b45]"
+                      }`}
+                    >
+                      {PLAN_LIMITS[p][row.key].toLocaleString(localeTag(user.locale))}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr className="border-b border-[#ece8dd] last:border-0">
+                <td className="px-4 py-2 text-[#4b4b45]">{t.featureJsonExport}</td>
+                {comparePlans.map((p) => (
+                  <td
+                    key={p}
+                    className={`px-4 py-2 text-right ${
+                      p === plan ? "bg-[#f7f7f4] font-medium text-[#1d1d1b]" : "text-[#4b4b45]"
+                    }`}
+                  >
+                    {jsonExportByPlan[p] ? (
+                      <span aria-label={t.featureYes}>✓</span>
+                    ) : (
+                      <span aria-label={t.featureNo}>—</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {plan !== "PLUS" && plan !== "PRO" ? (
