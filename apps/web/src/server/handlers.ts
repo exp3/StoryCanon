@@ -7,6 +7,7 @@ import {
   createCharacterNoteSchema,
   createCharacterSchema,
   createForeshadowingSchema,
+  createMysterySchema,
   createPlotThreadSchema,
   createProjectSchema,
   createRevisionTodoSchema,
@@ -26,6 +27,7 @@ type TargetType =
   | "CHARACTER_NOTE"
   | "WORLD_NOTE"
   | "FORESHADOWING"
+  | "MYSTERY"
   | "PLOT_THREAD"
   | "REVISION_TODO"
   | "STORY_STATE_SNAPSHOT";
@@ -52,6 +54,7 @@ const mutationTargets: Record<TargetType, TargetConfig> = {
   },
   WORLD_NOTE: { targetType: "WORLD_NOTE", delegate: prisma.worldNote, responseKey: "worldNote", updateSchema: createWorldNoteSchema, projectIdOf: (r) => String(r.projectId) },
   FORESHADOWING: { targetType: "FORESHADOWING", delegate: prisma.foreshadowing, responseKey: "foreshadowing", updateSchema: createForeshadowingSchema, projectIdOf: (r) => String(r.projectId) },
+  MYSTERY: { targetType: "MYSTERY", delegate: prisma.mystery, responseKey: "mystery", updateSchema: createMysterySchema, projectIdOf: (r) => String(r.projectId) },
   PLOT_THREAD: { targetType: "PLOT_THREAD", delegate: prisma.plotThread, responseKey: "plotThread", updateSchema: createPlotThreadSchema, projectIdOf: (r) => String(r.projectId) },
   REVISION_TODO: { targetType: "REVISION_TODO", delegate: prisma.revisionTodo, responseKey: "revisionTodo", updateSchema: createRevisionTodoSchema, projectIdOf: (r) => String(r.projectId) },
   STORY_STATE_SNAPSHOT: {
@@ -205,6 +208,7 @@ async function exportableProject(projectId: string) {
       },
       worldNotes: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
       foreshadowings: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
+      mysteries: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
       plotThreads: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
       revisionTodos: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
       storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
@@ -239,6 +243,7 @@ async function handleIndividualRoute(method: string, path: string[], actor: Curr
     "character-notes": mutationTargets.CHARACTER_NOTE,
     "world-notes": mutationTargets.WORLD_NOTE,
     foreshadowings: mutationTargets.FORESHADOWING,
+    mysteries: mutationTargets.MYSTERY,
     "plot-threads": mutationTargets.PLOT_THREAD,
     "revision-todos": mutationTargets.REVISION_TODO,
     "story-state-snapshots": mutationTargets.STORY_STATE_SNAPSHOT,
@@ -376,6 +381,15 @@ export async function handleWebApi(method: string, path: string[], actor: Curren
           const input = createForeshadowingSchema.parse(body);
           const { record, commandId: undoToken } = await createWithLog(mutationTargets.FORESHADOWING, actor, projectId, { ...input, projectId });
           return json({ foreshadowing: record, commandId: undoToken }, { status: 201 });
+        }
+      }
+      if (collection === "mysteries") {
+        if (method === "GET") return json({ mysteries: await prisma.mystery.findMany({ where: { projectId, deletedAt: null }, orderBy: { updatedAt: "desc" } }) });
+        if (method === "POST") {
+          await assertCountLimit(projectId, "mysteriesPerProject");
+          const input = createMysterySchema.parse(body);
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.MYSTERY, actor, projectId, { ...input, projectId });
+          return json({ mystery: record, commandId: undoToken }, { status: 201 });
         }
       }
       if (collection === "plot-threads") {
@@ -570,6 +584,7 @@ function mcpHelp(locale: string | null | undefined) {
           saveCharacterNote: "Save a character note (unknown character names are auto-created).",
           saveWorldNote: "Save a world-building note.",
           saveForeshadowing: "Save a piece of foreshadowing.",
+          saveMystery: "Save a mystery (central/arc/episode/scene scope).",
           savePlotThread: "Save an active plot thread.",
           saveRevisionTodo: "Save a revision TODO.",
           saveStoryStateSnapshot: "Save the latest story state (summary required).",
@@ -617,6 +632,7 @@ function mcpHelp(locale: string | null | undefined) {
         saveCharacterNote: "キャラクターメモを保存する(存在しないキャラ名は自動作成)。",
         saveWorldNote: "世界観メモを保存する。",
         saveForeshadowing: "伏線を保存する。",
+        saveMystery: "ミステリー(謎)を保存する。スコープは central/arc/episode/scene。",
         savePlotThread: "進行中プロットを保存する。",
         saveRevisionTodo: "修正TODOを保存する。",
         saveStoryStateSnapshot: "物語の最新状態を保存する(summary が必須)。",
@@ -706,6 +722,7 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
           characters: { where: { deletedAt: null } },
           plotThreads: { where: { deletedAt: null, status: { in: ["NOT_STARTED", "IN_PROGRESS", "ON_HOLD"] } } },
           foreshadowings: { where: { deletedAt: null, status: { in: ["UNPLANTED", "PLANTED", "IN_PROGRESS"] } } },
+          mysteries: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
           storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, take: 1 },
         },
       });
@@ -715,6 +732,7 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
         characters: project.characters,
         activePlotThreads: project.plotThreads,
         unresolvedForeshadowings: project.foreshadowings,
+        mysteries: project.mysteries,
       });
     }
     if (action === "save-generated-scene") {
@@ -797,6 +815,7 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
     const actionMap = {
       "save-world-note": ["world-notes"],
       "save-foreshadowing": ["foreshadowings"],
+      "save-mystery": ["mysteries"],
       "save-plot-thread": ["plot-threads"],
       "save-revision-todo": ["revision-todos"],
       "save-story-state-snapshot": ["story-state-snapshots"],

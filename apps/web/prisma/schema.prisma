@@ -64,6 +64,13 @@ enum PlotThreadStatus {
   DROPPED
 }
 
+enum MysteryScope {
+  CENTRAL
+  ARC
+  EPISODE
+  SCENE
+}
+
 enum ForeshadowingStatus {
   UNPLANTED
   PLANTED
@@ -93,12 +100,12 @@ enum RevisionSource {
 }
 
 model User {
-  id                    String          @id @default(cuid())
+  id                    String            @id @default(cuid())
   name                  String?
-  email                 String?         @unique
+  email                 String?           @unique
   emailVerified         DateTime?
   image                 String?
-  locale                String          @default("en")
+  locale                String            @default("en")
   onboardingCompletedAt DateTime?
   accounts              Account[]
   sessions              Session[]
@@ -108,8 +115,8 @@ model User {
   auditLogs             AuditLog[]
   mutationLogs          MutationLog[]
   readingProgress       ReadingProgress[]
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 }
 
 model Account {
@@ -124,7 +131,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -173,49 +180,50 @@ model ApiToken {
 }
 
 model Project {
-  id                 String               @id @default(cuid())
-  userId             String
-  title              String
-  genre              String?
-  premise            String?
-  tone               String?
-  targetAudience     String?
-  writingStyle       String?
-  forbiddenElements  String?
-  userPreferences    String?
-  visibility         Visibility           @default(PRIVATE)
-  deletedAt          DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chapters           Chapter[]
-  scenes             Scene[]
-  characters         Character[]
-  characterNotes     CharacterNote[]
-  worldNotes         WorldNote[]
-  plotThreads        PlotThread[]
-  foreshadowings     Foreshadowing[]
-  revisionTodos      RevisionTodo[]
+  id                  String               @id @default(cuid())
+  userId              String
+  title               String
+  genre               String?
+  premise             String?
+  tone                String?
+  targetAudience      String?
+  writingStyle        String?
+  forbiddenElements   String?
+  userPreferences     String?
+  visibility          Visibility           @default(PRIVATE)
+  deletedAt           DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapters            Chapter[]
+  scenes              Scene[]
+  characters          Character[]
+  characterNotes      CharacterNote[]
+  worldNotes          WorldNote[]
+  plotThreads         PlotThread[]
+  foreshadowings      Foreshadowing[]
+  mysteries           Mystery[]
+  revisionTodos       RevisionTodo[]
   storyStateSnapshots StoryStateSnapshot[]
-  exportJobs         ExportJob[]
-  mutationLogs       MutationLog[]
-  readingProgress    ReadingProgress[]
+  exportJobs          ExportJob[]
+  mutationLogs        MutationLog[]
+  readingProgress     ReadingProgress[]
 
   @@index([userId, updatedAt])
   @@index([userId, deletedAt])
 }
 
 model Chapter {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   projectId String
   title     String
   order     Int
   summary   String?
   purpose   String?
   deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   scenes    Scene[]
 
   @@unique([projectId, order])
@@ -244,25 +252,25 @@ model Scene {
 }
 
 model Character {
-  id            String          @id @default(cuid())
-  projectId     String
-  name          String
-  role          String?
-  age           String?
-  personality   String?
-  speechStyle   String?
-  appearance    String?
-  background    String?
-  goal          String?
-  secret        String?
-  currentState  String?
-  firstSceneId  String?
-  lastSceneId   String?
-  deletedAt     DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  notes         CharacterNote[]
+  id           String          @id @default(cuid())
+  projectId    String
+  name         String
+  role         String?
+  age          String?
+  personality  String?
+  speechStyle  String?
+  appearance   String?
+  background   String?
+  goal         String?
+  secret       String?
+  currentState String?
+  firstSceneId String?
+  lastSceneId  String?
+  deletedAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notes        CharacterNote[]
 
   @@unique([projectId, name])
   @@index([projectId, deletedAt])
@@ -338,6 +346,23 @@ model Foreshadowing {
   @@index([projectId, deletedAt])
 }
 
+model Mystery {
+  id          String       @id @default(cuid())
+  projectId   String
+  scope       MysteryScope @default(CENTRAL)
+  question    String
+  truth       String?
+  knownBy     String?
+  clues       String?
+  revealPoint String?
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
+}
+
 model RevisionTodo {
   id         String           @id @default(cuid())
   projectId  String
@@ -358,7 +383,7 @@ model RevisionTodo {
 }
 
 model StoryStateSnapshot {
-  id                       String   @id @default(cuid())
+  id                       String    @id @default(cuid())
   projectId                String
   summary                  String
   recentEvents             String?
@@ -371,23 +396,23 @@ model StoryStateSnapshot {
   writingRules             String?
   userPreferences          String?
   deletedAt                DateTime?
-  createdAt                DateTime @default(now())
-  project                  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt                DateTime  @default(now())
+  project                  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
   @@index([projectId, deletedAt])
 }
 
 model ExportJob {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   projectId String
   kind      String
   status    String
   s3Key     String?
   deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {

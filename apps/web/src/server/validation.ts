@@ -70,6 +70,15 @@ export const createForeshadowingSchema = z.object({
   importance: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
 });
 
+export const createMysterySchema = z.object({
+  scope: z.enum(["CENTRAL", "ARC", "EPISODE", "SCENE"]).default("CENTRAL"),
+  question: z.string().min(1).max(2000),
+  truth: z.string().max(10000).optional(),
+  knownBy: z.string().max(2000).optional(),
+  clues: z.string().max(10000).optional(),
+  revealPoint: z.string().max(2000).optional(),
+});
+
 export const createPlotThreadSchema = z.object({
   title: z.string().min(1).max(160),
   description: z.string().max(10000).optional(),

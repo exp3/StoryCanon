@@ -39,6 +39,14 @@ type ExportableProject = {
     importance?: string | null;
     plannedResolution?: string | null;
   }>;
+  mysteries: Array<{
+    scope: string;
+    question: string;
+    truth?: string | null;
+    knownBy?: string | null;
+    clues?: string | null;
+    revealPoint?: string | null;
+  }>;
   plotThreads: Array<{
     title: string;
     description?: string | null;
@@ -114,6 +122,16 @@ export function renderMarkdown(project: ExportableProject) {
   }
   lines.push("");
 
+  lines.push("## Mysteries");
+  for (const item of project.mysteries) {
+    lines.push(`- [${item.scope}] ${item.question}`);
+    if (item.truth) lines.push(`  - Truth: ${item.truth}`);
+    if (item.knownBy) lines.push(`  - Known By: ${item.knownBy}`);
+    if (item.clues) lines.push(`  - Clues: ${item.clues}`);
+    if (item.revealPoint) lines.push(`  - Reveal Point: ${item.revealPoint}`);
+  }
+  lines.push("");
+
   lines.push("## Plot Threads");
   for (const thread of project.plotThreads) {
     lines.push(`- [${thread.status}] ${thread.title}${thread.description ? `: ${thread.description}` : ""}`);
@@ -165,6 +183,7 @@ const plainTextLabels: Record<PlainTextLocale, Record<string, string>> = {
     characters: "【登場人物】",
     worldNotes: "【世界観メモ】",
     foreshadowings: "【伏線】",
+    mysteries: "【ミステリー】",
     plotThreads: "【進行中プロット】",
     revisionTodos: "【修正TODO】",
     manuscript: "【本文】",
@@ -192,6 +211,10 @@ const plainTextLabels: Record<PlainTextLocale, Record<string, string>> = {
     plannedResolution: "回収予定",
     resolutionCondition: "回収条件",
     suggestion: "提案",
+    truth: "真相",
+    knownBy: "真相を知る人物",
+    clues: "手がかり",
+    revealPoint: "明かされる地点",
   },
   en: {
     overview: "[Overview]",
@@ -199,6 +222,7 @@ const plainTextLabels: Record<PlainTextLocale, Record<string, string>> = {
     characters: "[Characters]",
     worldNotes: "[World Notes]",
     foreshadowings: "[Foreshadowings]",
+    mysteries: "[Mysteries]",
     plotThreads: "[Plot Threads]",
     revisionTodos: "[Revision Todos]",
     manuscript: "[Manuscript]",
@@ -226,6 +250,10 @@ const plainTextLabels: Record<PlainTextLocale, Record<string, string>> = {
     plannedResolution: "Planned Resolution",
     resolutionCondition: "Resolution Condition",
     suggestion: "Suggestion",
+    truth: "Truth",
+    knownBy: "Known By",
+    clues: "Clues",
+    revealPoint: "Reveal Point",
   },
 };
 
@@ -293,6 +321,18 @@ export function renderPlainText(project: ExportableProject, locale: PlainTextLoc
     for (const item of project.foreshadowings) {
       lines.push(`${bullet}[${item.status}] ${item.title}: ${item.description}`);
       push(L.plannedResolution, item.plannedResolution);
+    }
+    lines.push("");
+  }
+
+  if (project.mysteries.length > 0) {
+    lines.push(L.mysteries);
+    for (const item of project.mysteries) {
+      lines.push(`${bullet}[${item.scope}] ${item.question}`);
+      push(L.truth, item.truth);
+      push(L.knownBy, item.knownBy);
+      push(L.clues, item.clues);
+      push(L.revealPoint, item.revealPoint);
     }
     lines.push("");
   }
