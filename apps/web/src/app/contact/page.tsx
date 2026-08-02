@@ -3,7 +3,7 @@ import Link from "next/link";
 import { legalInfo } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "お問い合わせ | StoryCanon",
+  title: "お問い合わせ",
 };
 
 export default function ContactPage() {

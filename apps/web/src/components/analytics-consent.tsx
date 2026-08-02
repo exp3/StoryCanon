@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useState } from "react";
+import type { Dictionary } from "@/lib/i18n";
 
 const STORAGE_KEY = "sc_cookie_consent";
 export const OPEN_COOKIE_SETTINGS_EVENT = "sc:open-cookie-settings";
@@ -15,8 +16,11 @@ type Consent = "granted" | "denied";
  * reopened from the Cookie policy page via a `sc:open-cookie-settings` event.
  *
  * Renders nothing when no GA measurement id is configured.
+ *
+ * Strings are passed in rather than resolved here: this is a client component
+ * and the locale is only knowable on the server.
  */
-export function AnalyticsConsent({ gaId }: { gaId: string }) {
+export function AnalyticsConsent({ gaId, t }: { gaId: string; t: Dictionary["consent"] }) {
   const [consent, setConsent] = useState<Consent | null | "loading">("loading");
 
   useEffect(() => {
@@ -55,11 +59,11 @@ gtag('config', '${gaId}', { anonymize_ip: true });`}
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#dedbd2] bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4 text-sm text-[#3f3f39] sm:flex-row sm:items-center sm:justify-between">
             <p className="leading-6">
-              本サイトは、利用状況の分析のために Cookie（Google Analytics）を使用します。詳細は
-              <a className="mx-1 text-[#46605a] underline" href="/legal/cookies">
-                Cookieポリシー
+              {t.messageBefore}
+              <a className="text-[#46605a] underline" href="/legal/cookies">
+                {t.policyLink}
               </a>
-              をご覧ください。
+              {t.messageAfter}
             </p>
             <div className="flex shrink-0 gap-2">
               <button
@@ -67,14 +71,14 @@ gtag('config', '${gaId}', { anonymize_ip: true });`}
                 onClick={() => choose("denied")}
                 type="button"
               >
-                拒否する
+                {t.deny}
               </button>
               <button
                 className="rounded bg-[#1d1d1b] px-4 py-2 text-white"
                 onClick={() => choose("granted")}
                 type="button"
               >
-                同意する
+                {t.accept}
               </button>
             </div>
           </div>

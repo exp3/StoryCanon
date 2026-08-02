@@ -3,7 +3,7 @@ import { LegalPage } from "@/components/legal-page";
 import { legalInfo } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "特定商取引法に基づく表記 | StoryCanon",
+  title: "特定商取引法に基づく表記",
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

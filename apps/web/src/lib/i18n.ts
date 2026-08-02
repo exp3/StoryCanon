@@ -358,6 +358,266 @@ const en = {
     subtitle: "Choose your language to get started.",
     continueButton: "Continue",
   },
+  footer: {
+    tokushoho: "Legal notice (特定商取引法)",
+    terms: "Terms of Service",
+    privacy: "Privacy Policy",
+    refund: "Refund & Cancellation Policy",
+    cookies: "Cookie Policy",
+    security: "Security",
+    contact: "Contact",
+    legalLanguageNote: "Legal documents are provided in Japanese.",
+  },
+  consent: {
+    messageBefore: "This site uses cookies (Google Analytics) to understand how it is used. See our ",
+    policyLink: "Cookie Policy",
+    messageAfter: " for details.",
+    accept: "Accept",
+    deny: "Decline",
+  },
+  landing: {
+    meta: {
+      title: "StoryCanon — a structured, private story bible",
+      description:
+        "Scenes, characters, worldbuilding, foreshadowing and plot threads — everything you decide while building a story, kept in one fixed shape. Connects directly to ChatGPT, and works just as well without any AI.",
+    },
+    nav: {
+      audience: "Who it's for",
+      framework: "Structure",
+      ai: "AI integration",
+      solo: "Without AI",
+      flow: "How it works",
+      pricing: "Pricing",
+      policy: "Development",
+    },
+    switcher: { ja: "日本語", en: "English" },
+    hero: {
+      eyebrow: "Structured story bible",
+      titleLine1: "A place to keep",
+      titleLine2: "what you're making.",
+      lead:
+        "Scenes, characters, worldbuilding, foreshadowing, plot threads. Everything you decide while building a story, kept in one fixed shape. It connects directly to ChatGPT, and works just as well without any AI.",
+      primaryCta: "Start for free",
+      secondaryCta: "See the structure",
+      note: "A StoryCanon account is required. Sign in with Google.",
+    },
+    heroMock: {
+      projectTitle: "The Observer of Nagi",
+      savedBadge: "Saved",
+      tabs: ["Overview", "Scenes", "Characters", "World", "Foreshadowing"],
+      stateLabel: "Latest story state",
+      stateDate: "2026.07.10",
+      stateLines: [
+        "The protagonist found their missing sister's handwriting in the observatory logs.",
+        "Unresolved: who rewrote the log?",
+        "Next options: visit the harbour keeper.",
+      ],
+      stats: [
+        { label: "Scenes", value: "18" },
+        { label: "Foreshadowing", value: "6" },
+        { label: "TODOs", value: "3" },
+      ],
+    },
+    audience: {
+      heading: "Settings get buried where you wrote them.",
+      lead:
+        "StoryCanon is for the kind of writing where there is simply too much to remember — long-form fiction, a series, a campaign scenario, a world you keep adding to.",
+      audienceHeading: "Who it's for",
+      audience: [
+        { title: "Writing long-form or a series", body: "The further you go, the more you have already decided." },
+        { title: "Writing alongside ChatGPT", body: "The conversation moves on. What you settled should not move with it." },
+        { title: "Building scenarios and worlds", body: "TTRPGs, games, pitches — a lot gets decided before a word is written." },
+      ],
+      painsHeading: "Sound familiar?",
+      pains: [
+        {
+          symptom: "Which conversation did I decide that in?",
+          answer: "Decisions stay attached to the project, so you never scroll back through a chat history to find them.",
+        },
+        {
+          symptom: "I planted that foreshadowing and then forgot it.",
+          answer: "Unresolved foreshadowing stays on a list until its status actually changes.",
+        },
+        {
+          symptom: "This character's voice drifts between chapters.",
+          answer: "Everything about a person sits in one place, ready to check before you write them again.",
+        },
+        {
+          symptom: "I came back after a month and lost the thread.",
+          answer: "The latest story state is waiting for you, and so is the place you stopped reading.",
+        },
+        {
+          symptom: "I paste the same setting into the AI every single time.",
+          answer: "The project's context goes over in one piece, so there is nothing left to paste.",
+        },
+      ],
+    },
+    framework: {
+      heading: "The structure is already decided.",
+      lead:
+        "You don't pick a template and fill in the blanks. Every project has the same shape, so a character always has a goal, a secret and a current state — and nothing important ends up in a field you forgot to add.",
+      entitiesHeading: "What every project holds",
+      entities: [
+        { name: "Scenes", blurb: "Body text, summary, what happened, and the order they're read in." },
+        { name: "Chapters", blurb: "Title, order, summary and purpose, with scenes assigned to them." },
+        { name: "Characters", blurb: "Role, age, personality, speech style, appearance, background." },
+        { name: "Character notes", blurb: "Categorised as inner life, relationships, background, speech or plot." },
+        { name: "World notes", blurb: "Places, organizations, technology, history, culture, items and rules." },
+        { name: "Plot threads", blurb: "What is running, where it stands, and what would resolve it." },
+        { name: "Foreshadowing", blurb: "Where it was planted, how it's meant to pay off, whether it has." },
+        { name: "Mysteries", blurb: "The question, the truth, who knows it, the clues, the reveal point." },
+        { name: "Revision TODOs", blurb: "The problem, a suggested fix, a priority, and who raised it." },
+        { name: "Story state", blurb: "An append-only history of where the story stood at each point." },
+        { name: "Project settings", blurb: "Genre, premise, tone, audience, style, and elements to avoid." },
+        { name: "Reading position", blurb: "Where you stopped reading, per project." },
+      ],
+      lifecyclesHeading: "Status you don't have to invent",
+      lifecycles: [
+        { label: "Foreshadowing", stages: ["Unplanted", "Planted", "In progress", "Resolved", "Dropped"] },
+        { label: "Plot thread", stages: ["Not started", "In progress", "On hold", "Resolved", "Dropped"] },
+        { label: "Mystery scope", stages: ["Central", "Arc", "Episode", "Scene"] },
+      ],
+      fixedFieldsHeading: "Fields that are always there",
+      fixedFields: [
+        {
+          label: "Every character",
+          body: "Goal, secret and current state are first-class fields, not something you remember to write down.",
+        },
+        {
+          label: "Every mystery",
+          body: "Question, truth, who already knows, the clues laid so far, and where it is meant to be revealed.",
+        },
+        {
+          label: "Every state snapshot",
+          body: "Ten fields, including unresolved problems, active plot threads, next options and elements to avoid.",
+        },
+      ],
+      note:
+        "There is no template picker, because there is nothing to pick. One opinionated schema, applied to every project.",
+    },
+    ai: {
+      heading: "Designed for AI to read and write.",
+      lead:
+        "StoryCanon does not generate text itself. It is the place your AI writes into — so the story it helps you build is still there tomorrow, and still yours to change your mind about.",
+      points: [
+        {
+          title: "Connect it to ChatGPT once",
+          body:
+            "A few steps in Settings and ChatGPT can read and write your project directly. No plugin, no browser extension, nothing to install.",
+        },
+        {
+          title: "Stop pasting your setting in every time",
+          body:
+            "Your premise, the latest story state, the cast, the open plot threads and the unresolved foreshadowing all go over together — so the AI starts every session already knowing where the story is.",
+        },
+        {
+          title: "If it went the wrong way, just say so",
+          body:
+            "When the AI takes the story somewhere you didn't want, telling it to undo that is enough to put things back. You don't have to remember what it touched or repair anything by hand — and nothing is really deleted along the way.",
+        },
+        {
+          title: "You can always tell who wrote what",
+          body:
+            "Scenes and revision TODOs remember whether they came from you or from ChatGPT, so a draft you meant to rewrite never quietly becomes canon.",
+        },
+      ],
+    },
+    solo: {
+      heading: "Just as useful without any AI.",
+      lead:
+        "Everything an AI could write here, you can write yourself. Using StoryCanon purely to keep a scenario and its worldbuilding straight is a first-class way to use it.",
+      points: [
+        {
+          title: "Edit everything in the browser",
+          body: "Every entity has an ordinary form, with inline editing on the pages you are already reading.",
+        },
+        {
+          title: "A reader that remembers where you stopped",
+          body:
+            "Read your manuscript without the editing interface. Your scroll position is saved as you go and restored per project.",
+        },
+        {
+          title: "Find the setting you wrote three months ago",
+          body:
+            "World notes and character notes carry a category and an importance, and stay attached to the scene they came from.",
+        },
+        {
+          title: "Take your work with you",
+          body:
+            "Export the manuscript and everything around it as Markdown or plain text on any plan, or as structured JSON on a paid one.",
+        },
+      ],
+    },
+    flow: {
+      heading: "Write, record, and pick up where you left off.",
+      lead: "The loop is the same whether you are doing the writing or a model is.",
+      steps: [
+        {
+          title: "Decide the shape",
+          body: "Create a project and fill in what you already know: premise, tone, the characters you have so far.",
+        },
+        {
+          title: "Write and record",
+          body: "Write directly in StoryCanon, or let ChatGPT write and save straight into the project.",
+        },
+        {
+          title: "Read the state, continue",
+          body:
+            "Unresolved foreshadowing, open TODOs and the latest story state tell you what the next scene has to do.",
+        },
+      ],
+    },
+    pricing: {
+      heading: "Plans that follow your pace.",
+      lead: "Start free. Upgrade when you need more projects, more manuscript, or structured export.",
+      taxIncludedNote: "Prices include tax. The final amount is shown on the Stripe checkout page.",
+      comingSoonBadge: "Coming soon",
+      comingSoonNote:
+        "Paid plans are not open for purchase yet. Everything below is available to try on the free plan, and accounts will be able to upgrade once billing opens.",
+      freeCta: "Start for free",
+      paidCta: "Create an account",
+      compareHeading: "Every limit, side by side",
+      footnote: "Limits are per project unless the row says otherwise.",
+      plans: {
+        FREE: { label: "Free", tagline: "To get started" },
+        PLUS: { label: "Plus", tagline: "For writing regularly" },
+        PRO: { label: "Pro", tagline: "For long-form and series" },
+      },
+    },
+    policy: {
+      heading: "Still being built, on purpose.",
+      lead: "StoryCanon is developed and run by one person. That shapes what you can expect from it.",
+      points: [
+        {
+          title: "Feedback reaches the person writing the code",
+          body:
+            "There is no support tier between you and development. What gets built next is decided largely by what people ask for.",
+        },
+        {
+          title: "Improvements ship as they are ready",
+          body: "Changes land when they are finished rather than being held for a scheduled release.",
+        },
+        {
+          title: "Your work stays exportable",
+          body:
+            "Markdown and plain text export are on every plan, including the free one. If StoryCanon stops being the right tool, you can leave with everything you wrote.",
+        },
+        {
+          title: "What isn't ready is labelled as such",
+          body:
+            "Unfinished features are marked, not implied. Paid plans say \"coming soon\" on this page because that is exactly what they are.",
+        },
+      ],
+      contactCta: "Send a request or a bug report",
+      contactNote: "Opens a form. No account needed.",
+    },
+    cta: {
+      heading: "Start with one project.",
+      lead: "Free to start, and yours to export at any time.",
+      button: "Start for free",
+      note: "Sign in with Google.",
+    },
+  },
 };
 
 const ja: typeof en = {
@@ -710,6 +970,262 @@ const ja: typeof en = {
     title: "StoryCanonへようこそ",
     subtitle: "はじめに使用する言語を選択してください。",
     continueButton: "続ける",
+  },
+  footer: {
+    tokushoho: "特定商取引法に基づく表記",
+    terms: "利用規約",
+    privacy: "プライバシーポリシー",
+    refund: "返金・キャンセルポリシー",
+    cookies: "Cookieポリシー",
+    security: "セキュリティ",
+    contact: "お問い合わせ",
+    legalLanguageNote: "",
+  },
+  consent: {
+    messageBefore: "本サイトは、利用状況の分析のために Cookie（Google Analytics）を使用します。詳細は",
+    policyLink: "Cookieポリシー",
+    messageAfter: "をご覧ください。",
+    accept: "同意する",
+    deny: "拒否する",
+  },
+  landing: {
+    meta: {
+      title: "StoryCanon — 構造のある、プライベートな創作データベース",
+      description:
+        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ChatGPTと直接つなげられますが、AIを使わずシナリオと世界観の整理だけに使うこともできます。",
+    },
+    nav: {
+      audience: "こんな方へ",
+      framework: "構造",
+      ai: "AI連携",
+      solo: "AIなしでも",
+      flow: "使い方",
+      pricing: "料金プラン",
+      policy: "開発方針",
+    },
+    switcher: { ja: "日本語", en: "English" },
+    hero: {
+      eyebrow: "構造のある創作データベース",
+      titleLine1: "つくるものを、",
+      titleLine2: "置いておく場所。",
+      lead:
+        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ChatGPTと直接つなげられますが、AIを使わずに使っても過不足なく機能します。",
+      primaryCta: "無料ではじめる",
+      secondaryCta: "構造を見る",
+      note: "ご利用にはStoryCanonアカウントが必要です。Googleアカウントでログインします。",
+    },
+    heroMock: {
+      projectTitle: "凪の街の観測者",
+      savedBadge: "保存済み",
+      tabs: ["概要", "シーン", "キャラクター", "世界観", "伏線"],
+      stateLabel: "最新の物語状態",
+      stateDate: "2026.07.10",
+      stateLines: [
+        "主人公は観測塔の記録に、失踪した姉の筆跡を見つけた。",
+        "未解決: 記録を書き換えた人物は誰か。",
+        "次の選択肢: 港の管理人を訪ねる。",
+      ],
+      stats: [
+        { label: "シーン", value: "18" },
+        { label: "伏線", value: "6" },
+        { label: "TODO", value: "3" },
+      ],
+    },
+    audience: {
+      heading: "設定は、書いた場所に埋もれていきます。",
+      lead:
+        "StoryCanonは、長編やシリーズ、TRPGのシナリオのように、覚えておくことが多すぎる創作のための道具です。",
+      audienceHeading: "こんな人のための道具です",
+      audience: [
+        { title: "長編・シリーズを書く人", body: "章が進むほど、すでに決めたことが増えていきます。" },
+        { title: "ChatGPTと一緒に書く人", body: "会話は流れていきます。決めた設定まで一緒に流れてしまわないように。" },
+        { title: "シナリオと世界観をつくる人", body: "TRPG、ゲーム、企画。一行も書く前に決めることがたくさんあります。" },
+      ],
+      painsHeading: "こんな詰まり方をしていませんか",
+      pains: [
+        {
+          symptom: "あの設定、どの会話で決めたんだっけ",
+          answer: "決めたことは作品に紐づいて残ります。会話の履歴を遡って探す必要がありません。",
+        },
+        {
+          symptom: "張った伏線を、そのまま忘れていた",
+          answer: "未回収の伏線は一覧に残り、状態を変えるまで消えません。",
+        },
+        {
+          symptom: "キャラの口調や年齢が、章によってぶれる",
+          answer: "人物の情報は1か所にまとまり、次に書く前にいつでも確認できます。",
+        },
+        {
+          symptom: "久しぶりに再開したら、どこまで書いたか思い出せない",
+          answer: "最新の物語状態と、読んでいた位置が残っています。",
+        },
+        {
+          symptom: "AIに毎回、同じ設定を貼り直している",
+          answer: "作品の文脈をまとめて渡せるので、貼り直す必要がありません。",
+        },
+      ],
+    },
+    framework: {
+      heading: "構造は、はじめから決まっています。",
+      lead:
+        "テンプレートを選んで空欄を埋めるのではありません。すべての作品が同じ形を持ち、キャラクターには必ず目的・秘密・現在の状態があります。項目を作り忘れて大事な設定が行き場を失うことがありません。",
+      entitiesHeading: "すべての作品が持つもの",
+      entities: [
+        { name: "シーン", blurb: "本文、要約、起きた出来事、そして読む順番。" },
+        { name: "章", blurb: "タイトル・順番・要約・目的を持ち、シーンを束ねます。" },
+        { name: "キャラクター", blurb: "役割、年齢、性格、口調、外見、背景。" },
+        { name: "キャラクターノート", blurb: "内面・関係・背景・口調・プロットに分類して記録。" },
+        { name: "世界観ノート", blurb: "場所、組織、技術、歴史、文化、アイテム、ルール。" },
+        { name: "プロット", blurb: "動いている筋、その現状、そして何をもって解決とするか。" },
+        { name: "伏線", blurb: "どこに置いたか、どう回収する予定か、回収済みかどうか。" },
+        { name: "謎", blurb: "問い、真相、誰が知っているか、手がかり、明かす場所。" },
+        { name: "改稿TODO", blurb: "問題点、修正案、優先度、そして誰が指摘したか。" },
+        { name: "物語状態", blurb: "その時点で物語がどこにあったかの、追記のみの履歴。" },
+        { name: "作品設定", blurb: "ジャンル、あらすじ、トーン、想定読者、文体、避ける要素。" },
+        { name: "読書位置", blurb: "どこまで読んだかを作品ごとに保持。" },
+      ],
+      lifecyclesHeading: "自分で決めなくていいステータス",
+      lifecycles: [
+        { label: "伏線", stages: ["未設置", "設置済み", "進行中", "回収済み", "破棄"] },
+        { label: "プロット", stages: ["未着手", "進行中", "保留", "解決", "破棄"] },
+        { label: "謎のスコープ", stages: ["中心", "アーク", "エピソード", "シーン"] },
+      ],
+      fixedFieldsHeading: "必ず用意されている項目",
+      fixedFields: [
+        {
+          label: "すべてのキャラクター",
+          body: "目的・秘密・現在の状態が最初から項目として存在します。書き留めるのを覚えておく必要はありません。",
+        },
+        {
+          label: "すべての謎",
+          body: "問い、真相、すでに知っている人物、ここまでに置いた手がかり、そして明かす予定の場所。",
+        },
+        {
+          label: "すべての物語状態",
+          body: "未解決の問題、動いているプロット、次の選択肢、避ける要素を含む10項目。",
+        },
+      ],
+      note: "テンプレートの選択肢はありません。選ぶ必要がないからです。ひとつの決まった構造を、すべての作品に。",
+    },
+    ai: {
+      heading: "AIが読み書きすることを前提に設計。",
+      lead:
+        "StoryCanon自身は文章を生成しません。AIが書き込む先として設計されています。だから、AIと一緒につくった物語が明日も残っていて、あとから考え直すこともできます。",
+      points: [
+        {
+          title: "ChatGPTとは一度つなぐだけ",
+          body:
+            "設定画面で数ステップ進めれば、ChatGPTがあなたの作品を直接読み書きできるようになります。プラグインもブラウザ拡張も、インストールするものは何もありません。",
+        },
+        {
+          title: "毎回、設定を貼り直さなくていい",
+          body:
+            "あらすじ、最新の物語状態、登場人物、進行中のプロット、未回収の伏線をまとめて渡せます。AIは毎回、物語がいまどこにいるかを分かった状態から書きはじめられます。",
+        },
+        {
+          title: "方向性が違ったら、そう言うだけで戻せます",
+          body:
+            "AIが望んでいない方向へ話を進めてしまったときは、「さっきのは無しにして」と伝えれば元に戻せます。どこを触られたかを覚えておく必要も、手で直す必要もありません。その過程で実際のデータが消えることもありません。",
+        },
+        {
+          title: "どちらが書いたかが必ず残ります",
+          body:
+            "シーンと改稿TODOには、自分が書いたのかChatGPTが書いたのかが記録されます。書き直すつもりだった下書きが、いつのまにか正式版になってしまうことがありません。",
+        },
+      ],
+    },
+    solo: {
+      heading: "AIを使わなくても、そのまま使えます。",
+      lead:
+        "AIが書き込める項目は、すべて自分の手でも書けます。シナリオと世界観の情報整理のためだけに使うことも、想定された使い方のひとつです。",
+      points: [
+        {
+          title: "すべてブラウザから編集できる",
+          body: "どのデータにも通常のフォームがあり、閲覧中のページからそのまま編集できます。",
+        },
+        {
+          title: "読んだ位置を覚えているリーダー",
+          body:
+            "編集UIのない画面で本文を読めます。スクロール位置は読みながら自動保存され、作品ごとに復元されます。",
+        },
+        {
+          title: "3か月前に書いた設定が見つかる",
+          body: "世界観ノートとキャラクターノートは分類と重要度を持ち、関連するシーンに紐づいたまま残ります。",
+        },
+        {
+          title: "書いたものは持ち出せる",
+          body:
+            "本文と周辺情報をMarkdownまたはプレーンテキストで書き出せます（全プラン）。有料プランでは構造化されたJSONにも対応します。",
+        },
+      ],
+    },
+    flow: {
+      heading: "書いて、記録して、続きへ戻る。",
+      lead: "書くのが自分でもモデルでも、繰り返す流れは同じです。",
+      steps: [
+        {
+          title: "構造を決める",
+          body: "作品を作り、いま分かっていることを埋めます。あらすじ、トーン、すでにいる登場人物。",
+        },
+        {
+          title: "書いて記録する",
+          body: "StoryCanonで直接書くか、ChatGPTに書かせてそのまま作品へ保存します。",
+        },
+        {
+          title: "状態を見て、続きを書く",
+          body: "未回収の伏線、残っているTODO、最新の物語状態が、次のシーンで何をすべきかを教えてくれます。",
+        },
+      ],
+    },
+    pricing: {
+      heading: "創作のペースに合わせたプラン。",
+      lead: "まずは無料で。作品数・本文量・構造化された書き出しが必要になったらアップグレードできます。",
+      taxIncludedNote: "表示価格は税込です。最終的な金額は決済ページ（Stripe）に表示されます。",
+      comingSoonBadge: "準備中",
+      comingSoonNote:
+        "有料プランは現在ご購入いただけません。以下の機能は無料プランでお試しいただけます。決済開始後にアップグレードできるようになります。",
+      freeCta: "無料ではじめる",
+      paidCta: "アカウントを作成",
+      compareHeading: "すべての上限",
+      footnote: "特に記載のない上限は、作品ごとの値です。",
+      plans: {
+        FREE: { label: "Free", tagline: "はじめての方へ" },
+        PLUS: { label: "Plus", tagline: "継続して書く方へ" },
+        PRO: { label: "Pro", tagline: "長編・シリーズ制作に" },
+      },
+    },
+    policy: {
+      heading: "つくり続けています。",
+      lead: "StoryCanonは個人で開発・運営しています。だからこそ、お約束できることがあります。",
+      points: [
+        {
+          title: "要望は、コードを書く本人に直接届きます",
+          body: "あなたと開発の間にサポート階層はありません。次に何をつくるかは、寄せられた要望で大きく変わります。",
+        },
+        {
+          title: "できたものから順に反映します",
+          body: "まとまったリリースを待たず、完成した変更からそのまま反映していきます。",
+        },
+        {
+          title: "書いたものは、いつでも持ち出せます",
+          body:
+            "Markdownとプレーンテキストでの書き出しは無料プランを含む全プランで使えます。StoryCanonが合わなくなったときも、書いたものはすべて持って出られます。",
+        },
+        {
+          title: "できていないことは、できていないと書きます",
+          body:
+            "未完成の機能はそう明記します。このページで有料プランを「準備中」と書いているのは、実際にそうだからです。",
+        },
+      ],
+      contactCta: "要望・不具合を送る",
+      contactNote: "フォームが開きます。アカウントは不要です。",
+    },
+    cta: {
+      heading: "まずは、1作品から。",
+      lead: "無料ではじめられます。書き出しはいつでもできます。",
+      button: "無料ではじめる",
+      note: "Googleアカウントでログインします。",
+    },
   },
 };
 
