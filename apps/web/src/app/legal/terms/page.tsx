@@ -3,7 +3,7 @@ import { LegalPage, LegalSection } from "@/components/legal-page";
 import { legalInfo } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "利用規約 | StoryCanon",
+  title: "利用規約",
 };
 
 export default function TermsPage() {

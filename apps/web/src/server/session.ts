@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import type { Locale } from "@/lib/i18n";
 
 export type SessionUser = {
@@ -11,12 +12,16 @@ export type SessionUser = {
   onboardingCompletedAt: Date | null;
 };
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+/**
+ * Cached per request: the layout, header, footer and page each need the user,
+ * and the database session strategy makes every uncached call a round trip.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const session = await auth();
   const user = session?.user as SessionUser | undefined;
   if (!user?.id) return null;
   return user;
-}
+});
 
 export async function requireSessionUser(nextPath?: string) {
   const user = await getSessionUser();

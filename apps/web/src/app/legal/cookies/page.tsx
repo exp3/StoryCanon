@@ -4,7 +4,7 @@ import { CookieSettingsButton } from "@/components/cookie-settings-button";
 import { legalInfo } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Cookieポリシー | StoryCanon",
+  title: "Cookieポリシー",
 };
 
 export default function CookiePolicyPage() {
@@ -25,6 +25,14 @@ export default function CookiePolicyPage() {
             <p className="font-medium text-[#1d1d1b]">必須 Cookie（同意不要）</p>
             <p>
               ログインおよびセッションの維持、セキュリティのために使用します。これらは本サービスの提供に不可欠であり、無効にすると正常に利用できない場合があります。
+            </p>
+          </div>
+          <div>
+            <p className="font-medium text-[#1d1d1b]">機能 Cookie（同意不要）</p>
+            <p>
+              表示言語の選択を保持するために使用します（
+              <code className="mx-1 rounded bg-[#f2f1ec] px-1 text-sm">sc_locale</code>
+              ）。個人を識別する情報は含まれず、解析にも利用しません。
             </p>
           </div>
           <div>

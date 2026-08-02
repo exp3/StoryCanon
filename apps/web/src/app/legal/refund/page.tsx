@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal-page";
 
 export const metadata: Metadata = {
-  title: "返金・キャンセルポリシー | StoryCanon",
+  title: "返金・キャンセルポリシー",
 };
 
 export default function RefundPage() {

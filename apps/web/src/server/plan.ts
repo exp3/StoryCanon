@@ -1,50 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { PLAN_LIMITS, type CountLimitKind } from "@/lib/plan-limits";
+
+// Re-exported so existing importers keep working; the values themselves live
+// in @/lib/plan-limits, which is Prisma-free and shared with the landing page.
+export { PLAN_LIMITS };
+export type { CountLimitKind };
 
 type Limit = number | null;
-export type CountLimitKind =
-  | "charactersPerProject"
-  | "worldNotesPerProject"
-  | "foreshadowingsPerProject"
-  | "mysteriesPerProject"
-  | "plotThreadsPerProject"
-  | "revisionTodosPerProject"
-  | "storySnapshotsPerProject";
-
-export const PLAN_LIMITS = {
-  FREE: {
-    projects: 3,
-    charactersPerProject: 8,
-    bodyCharsPerProject: 20000,
-    worldNotesPerProject: 30,
-    foreshadowingsPerProject: 30,
-    mysteriesPerProject: 30,
-    plotThreadsPerProject: 30,
-    revisionTodosPerProject: 50,
-    storySnapshotsPerProject: 10,
-  },
-  PLUS: {
-    projects: 50,
-    charactersPerProject: 20,
-    bodyCharsPerProject: 100000,
-    worldNotesPerProject: 200,
-    foreshadowingsPerProject: 100,
-    mysteriesPerProject: 100,
-    plotThreadsPerProject: 100,
-    revisionTodosPerProject: 300,
-    storySnapshotsPerProject: 100,
-  },
-  PRO: {
-    projects: 500,
-    charactersPerProject: 200,
-    bodyCharsPerProject: 1000000,
-    worldNotesPerProject: 2000,
-    foreshadowingsPerProject: 1000,
-    mysteriesPerProject: 1000,
-    plotThreadsPerProject: 1000,
-    revisionTodosPerProject: 3000,
-    storySnapshotsPerProject: 1000,
-  },
-} as const;
 
 export class PlanLimitError extends Error {
   constructor(
