@@ -31,7 +31,13 @@ export interface ComputeStackProps extends cdk.StackProps {
   stripePriceProYearly?: string;
   /** Comma-separated admin email allowlist injected as ADMIN_EMAILS. Defaults to the primary operator in bin/storycanon.ts. */
   adminEmails?: string;
-  /** Google Analytics measurement id (e.g. "G-XXXXXXX"), injected as NEXT_PUBLIC_GA_ID. Read server-side at runtime by legal-info.ts, so no image rebuild is needed to change it. */
+  /**
+   * Google Analytics measurement id (e.g. "G-XXXXXXX"), injected as
+   * GA_MEASUREMENT_ID. Deliberately not named NEXT_PUBLIC_GA_ID: Next.js
+   * inlines NEXT_PUBLIC_* at build time, so a runtime container env var by that
+   * name is ignored. legal-info.ts reads this server-side and layout.tsx passes
+   * it to the client, so changing it only needs a redeploy, not a rebuild.
+   */
   gaMeasurementId?: string;
   /**
    * When both are set, the ALB serves production over HTTPS with an ACM cert
@@ -128,7 +134,7 @@ export class ComputeStack extends cdk.Stack {
         STRIPE_PRICE_PRO_MONTHLY: props.stripePriceProMonthly ?? "",
         STRIPE_PRICE_PRO_YEARLY: props.stripePriceProYearly ?? "",
         ADMIN_EMAILS: props.adminEmails ?? "",
-        NEXT_PUBLIC_GA_ID: props.gaMeasurementId ?? "",
+        GA_MEASUREMENT_ID: props.gaMeasurementId ?? "",
       },
       secrets: Object.fromEntries(
         Object.entries(props.secrets.appSecrets).map(([name, secret]) => [

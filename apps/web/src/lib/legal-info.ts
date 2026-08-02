@@ -42,8 +42,10 @@ export const legalInfo = {
     proYearly: "$528",
   },
 
-  // 解析
-  gaMeasurementId: process.env.NEXT_PUBLIC_GA_ID ?? "",
+  // 解析。NEXT_PUBLIC_ を付けないこと — その接頭辞だと Next.js がビルド時に値を
+  // 埋め込むため、実行時の環境変数が効かなくなる。この値を読むのは layout.tsx
+  // （サーバーコンポーネント）で、そこから props でクライアント側へ渡している。
+  gaMeasurementId: process.env.GA_MEASUREMENT_ID ?? "",
 
   // 更新日（各ページ共通。改定時に更新）
   lastUpdated: "2026-07-12",
