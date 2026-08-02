@@ -42,10 +42,10 @@ jobs:
       STRIPE_PRICE_PRO_YEARLY: ${{ vars.STRIPE_PRICE_PRO_YEARLY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -65,14 +65,19 @@ jobs:
       - name: Run integration tests
         run: npm run test:integration
 
+      # Bounded so a hung assume-role fails in minutes instead of silently
+      # retrying until the job timeout: v4 ran on node20, and once the runners
+      # forced node24 the STS call stopped completing at all — eight attempts,
+      # 405s apart, not one error line, 54 minutes burned.
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
+        timeout-minutes: 5
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Deploy (ECS blue/green via CodeDeploy)
         run: bash scripts/deploy-bluegreen.sh
