@@ -605,7 +605,7 @@ const en = {
         {
           title: "What isn't ready is labelled as such",
           body:
-            "Unfinished features are marked, not implied. Paid plans say \"coming soon\" on this page because that is exactly what they are.",
+            "Unfinished features are marked, not implied. Anything still in progress says so plainly, and only stops saying so once it actually works.",
         },
       ],
       contactCta: "Send a request or a bug report",
@@ -1214,7 +1214,7 @@ const ja: typeof en = {
         {
           title: "できていないことは、できていないと書きます",
           body:
-            "未完成の機能はそう明記します。このページで有料プランを「準備中」と書いているのは、実際にそうだからです。",
+            "未完成の機能はそう明記します。準備中のものには準備中と書き、実際に使えるようになってから「使えます」と書きます。",
         },
       ],
       contactCta: "要望・不具合を送る",
