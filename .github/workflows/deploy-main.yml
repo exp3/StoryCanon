@@ -27,6 +27,7 @@ jobs:
       HOSTED_ZONE_NAME: ${{ vars.HOSTED_ZONE_NAME }}
       NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
       PAYMENT_MODE: ${{ vars.PAYMENT_MODE }}
+      GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
       BOOTSTRAP: ${{ vars.CDK_BOOTSTRAP }}
       RECREATE_SERVICE: ${{ vars.ECS_RECREATE_SERVICE }}
       IMAGE_TAG: ${{ github.sha }}

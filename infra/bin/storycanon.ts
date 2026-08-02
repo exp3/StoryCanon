@@ -35,7 +35,7 @@ const stripePriceProMonthly =
 const stripePriceProYearly =
   app.node.tryGetContext("stripePriceProYearly") ?? process.env.STRIPE_PRICE_PRO_YEARLY ?? "";
 const adminEmails = app.node.tryGetContext("adminEmails") ?? process.env.ADMIN_EMAILS ?? "n.kimura@softglow.jp";
-const gaMeasurementId = app.node.tryGetContext("gaMeasurementId") ?? process.env.NEXT_PUBLIC_GA_ID ?? "";
+const gaMeasurementId = app.node.tryGetContext("gaMeasurementId") ?? process.env.GA_MEASUREMENT_ID ?? "";
 const hostedZoneName = app.node.tryGetContext("hostedZoneName") ?? process.env.HOSTED_ZONE_NAME;
 const appDomainName = app.node.tryGetContext("appDomainName") ?? process.env.APP_DOMAIN_NAME;
 
