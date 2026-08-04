@@ -27,6 +27,12 @@ export default async function CharacterDetailPage({
     orderBy: { updatedAt: "desc" },
   });
 
+  const timelineEvents = await prisma.timelineEvent.findMany({
+    where: { projectId, deletedAt: null, characters: { some: { id: characterId } } },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    include: { tags: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } } },
+  });
+
   async function updateCharacter(formData: FormData) {
     "use server";
 
@@ -135,6 +141,42 @@ export default async function CharacterDetailPage({
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="mt-6 rounded border bg-white p-6">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h2 className="font-semibold">{t.timelineHeading}</h2>
+          <Link
+            className="shrink-0 text-sm text-[#4b4b45] underline"
+            href={`/projects/${projectId}/timeline?character=${characterId}`}
+          >
+            {t.timelineViewAll}
+          </Link>
+        </div>
+        {timelineEvents.length === 0 ? (
+          <p className="text-sm text-[#555]">{t.timelineEmpty}</p>
+        ) : (
+          <ol className="space-y-3">
+            {timelineEvents.map((event) => (
+              <li key={event.id} className="rounded border border-[#ece8dd] px-4 py-3">
+                {event.occurredAt ? <p className="text-xs text-[#315247]">{event.occurredAt}</p> : null}
+                <p className="mt-1 font-medium">{event.title}</p>
+                {event.description ? (
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[#555]">{event.description}</p>
+                ) : null}
+                {event.tags.length > 0 ? (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {event.tags.map((tag) => (
+                      <li key={tag.id} className="rounded border border-[#ece8dd] px-2 py-1 text-xs text-[#4b4b45]">
+                        {tag.name}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ol>
         )}
       </section>
 

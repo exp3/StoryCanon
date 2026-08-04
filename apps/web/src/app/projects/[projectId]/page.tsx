@@ -19,6 +19,7 @@ function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
     { label: t.tabPlotThreads, href: `/projects/${projectId}/plot-threads` },
     { label: t.tabRevisionTodos, href: `/projects/${projectId}/revision-todos` },
     { label: t.tabStoryState, href: `/projects/${projectId}/story-state` },
+    { label: t.tabTimeline, href: `/projects/${projectId}/timeline` },
     { label: t.tabExport, href: `/projects/${projectId}/export` },
   ];
 }

@@ -208,6 +208,8 @@ model Project {
   exportJobs          ExportJob[]
   mutationLogs        MutationLog[]
   readingProgress     ReadingProgress[]
+  timelineEvents      TimelineEvent[]
+  timelineTags        TimelineTag[]
 
   @@index([userId, updatedAt])
   @@index([userId, deletedAt])
@@ -252,25 +254,26 @@ model Scene {
 }
 
 model Character {
-  id           String          @id @default(cuid())
-  projectId    String
-  name         String
-  role         String?
-  age          String?
-  personality  String?
-  speechStyle  String?
-  appearance   String?
-  background   String?
-  goal         String?
-  secret       String?
-  currentState String?
-  firstSceneId String?
-  lastSceneId  String?
-  deletedAt    DateTime?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  notes        CharacterNote[]
+  id             String          @id @default(cuid())
+  projectId      String
+  name           String
+  role           String?
+  age            String?
+  personality    String?
+  speechStyle    String?
+  appearance     String?
+  background     String?
+  goal           String?
+  secret         String?
+  currentState   String?
+  firstSceneId   String?
+  lastSceneId    String?
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notes          CharacterNote[]
+  timelineEvents TimelineEvent[] @relation("TimelineEventCharacters")
 
   @@unique([projectId, name])
   @@index([projectId, deletedAt])
@@ -400,6 +403,40 @@ model StoryStateSnapshot {
   project                  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
+  @@index([projectId, deletedAt])
+}
+
+model TimelineEvent {
+  id          String        @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  // In-story date, kept as free text: fiction rarely maps onto a real calendar
+  // ("Imperial year 302, spring"). `order` is what the timeline sorts by.
+  occurredAt  String?
+  order       Int
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characters  Character[]   @relation("TimelineEventCharacters")
+  tags        TimelineTag[] @relation("TimelineEventTags")
+
+  @@index([projectId, order])
+  @@index([projectId, deletedAt])
+}
+
+model TimelineTag {
+  id        String          @id @default(cuid())
+  projectId String
+  name      String
+  deletedAt DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  events    TimelineEvent[] @relation("TimelineEventTags")
+
+  @@unique([projectId, name])
   @@index([projectId, deletedAt])
 }
 
