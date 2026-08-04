@@ -15,6 +15,8 @@ export default async function AdminPage({
   const t = getDictionary(user.locale).admin;
   const { error, email, granted } = await searchParams;
 
+  const userCount = await prisma.user.count();
+
   const subscriptions = await prisma.subscription.findMany({
     where: {
       OR: [{ plan: { in: ["PLUS", "PRO"] } }, { status: { in: ["ACTIVE", "TRIALING"] } }],
@@ -50,6 +52,11 @@ export default async function AdminPage({
           {email ? <span className="ml-1 font-medium">{email}</span> : null}
         </div>
       ) : null}
+
+      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
+        <p className="text-sm text-[#666]">{t.userCountHeading}</p>
+        <p className="mt-4 text-3xl font-semibold">{userCount.toLocaleString(localeTag(user.locale))}</p>
+      </section>
 
       <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
         <h2 className="mb-3 text-xl font-semibold">{t.grantHeading}</h2>

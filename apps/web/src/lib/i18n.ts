@@ -26,6 +26,7 @@ const en = {
   admin: {
     title: "Admin Console",
     description: "Grant or revoke paid plans manually, without Stripe checkout.",
+    userCountHeading: "Registered users",
     grantHeading: "Grant a plan",
     emailLabel: "User email",
     planLabel: "Plan",
@@ -640,6 +641,7 @@ const ja: typeof en = {
   admin: {
     title: "管理コンソール",
     description: "Stripe決済を介さず、有償プランを手動で付与・剥奪できます。",
+    userCountHeading: "登録ユーザー数",
     grantHeading: "プランを付与",
     emailLabel: "ユーザーのメールアドレス",
     planLabel: "プラン",
