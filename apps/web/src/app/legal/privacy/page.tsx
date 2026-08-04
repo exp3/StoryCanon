@@ -40,7 +40,7 @@ export default function PrivacyPage() {
             <a className="mx-1 text-[#46605a] underline" href="/legal/cookies">Cookieポリシー</a>
             をご参照ください）
           </li>
-          <li>PostHog Inc.（プロダクト分析。ログイン中の利用者については、氏名・メールアドレスは送信せず、内部的なユーザーIDおよびプラン種別を送信します。EU（欧州）リージョンでホスティングされています。詳細は
+          <li>PostHog Inc.（プロダクト分析。ログイン中の利用者については、氏名・メールアドレスは送信せず、内部的なユーザーIDおよびプラン種別を送信します。US（米国）リージョンでホスティングされています。詳細は
             <a className="mx-1 text-[#46605a] underline" href="/legal/cookies">Cookieポリシー</a>
             をご参照ください）
           </li>
