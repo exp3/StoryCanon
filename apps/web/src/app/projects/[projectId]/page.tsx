@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary, localeTag, type Dictionary, type Locale } from "@/lib/i18n";
+import { handleWebApi } from "@/server/handlers";
 import { requireSessionUser } from "@/server/session";
 import { createProjectSchema } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
+import { DeleteProjectDialog } from "@/components/delete-project-dialog";
 import { ProjectTitleEditor } from "@/components/project-title-editor";
 
 function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
@@ -87,6 +90,25 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     const title = createProjectSchema.shape.title.parse(String(formData.get("title") ?? "").trim());
     await prisma.project.update({ where: { id: owned.id }, data: { title } });
     redirect(`/projects/${projectId}`);
+  }
+
+  async function deleteProject() {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+    // Reuses the API handler so the UI delete behaves exactly like DELETE
+    // /api/projects/:id: ownership check, soft delete, and a mutation log the
+    // MCP rollback command can undo.
+    const response = await handleWebApi("DELETE", ["projects", projectId], { userId: currentUser.id, via: "web" }, {});
+    // A failure must never look like a successful delete, so only a genuine 404
+    // renders the not-found page; anything else bubbles up as an error.
+    if (response.status === 404) notFound();
+    if (!response.ok) throw new Error(`Failed to delete project ${projectId}: ${response.status}`);
+
+    revalidatePath("/projects");
+    revalidatePath("/dashboard");
+    revalidatePath(`/projects/${projectId}`, "layout");
+    redirect("/projects");
   }
 
   return (
@@ -270,6 +292,24 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <Link className="rounded border px-3 py-2 text-center" href="/projects/new">
                 {t.createAnotherProject}
               </Link>
+            </div>
+          </section>
+
+          <section className="rounded border border-[#e3b8b3] bg-white p-4">
+            <h2 className="font-semibold text-[#a3352b]">{t.dangerZoneHeading}</h2>
+            <div className="mt-3">
+              <DeleteProjectDialog
+                action={deleteProject}
+                projectTitle={project.title}
+                labels={{
+                  trigger: t.deleteProject,
+                  heading: t.deleteDialogHeading,
+                  body: t.deleteDialogBody,
+                  confirm: t.deleteDialogConfirm,
+                  deleting: t.deleteDialogDeleting,
+                  cancel: t.deleteDialogCancel,
+                }}
+              />
             </div>
           </section>
         </aside>

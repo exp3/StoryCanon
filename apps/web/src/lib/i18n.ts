@@ -111,6 +111,14 @@ const en = {
     nextActionsHeading: "Next Steps",
     backToProjects: "Back to Projects",
     createAnotherProject: "Create Another Project",
+    dangerZoneHeading: "Danger Zone",
+    deleteProject: "Delete this project",
+    deleteDialogHeading: "Delete this project?",
+    deleteDialogBody:
+      "The project and everything under it — scenes, characters, world notes, foreshadowing, and story state — disappears from your workspace. This is a logical delete: the data is kept and can be restored with the MCP rollback command, but not from this screen.",
+    deleteDialogConfirm: "Delete",
+    deleteDialogDeleting: "Deleting...",
+    deleteDialogCancel: "Cancel",
   },
   sceneNew: {
     title: "New Scene",
@@ -725,6 +733,14 @@ const ja: typeof en = {
     nextActionsHeading: "次の操作",
     backToProjects: "作品一覧へ戻る",
     createAnotherProject: "別の作品を作成",
+    dangerZoneHeading: "危険な操作",
+    deleteProject: "この作品を削除",
+    deleteDialogHeading: "この作品を削除しますか?",
+    deleteDialogBody:
+      "作品と、その配下のシーン・キャラクター・世界観ノート・伏線・物語状態がすべて表示されなくなります。論理削除のためデータは保持され、MCP のロールバックコマンドで復元できますが、この画面からは元に戻せません。",
+    deleteDialogConfirm: "削除する",
+    deleteDialogDeleting: "削除中...",
+    deleteDialogCancel: "キャンセル",
   },
   sceneNew: {
     title: "新規シーン",
