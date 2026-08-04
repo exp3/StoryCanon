@@ -369,7 +369,7 @@ const en = {
     legalLanguageNote: "Legal documents are provided in Japanese.",
   },
   consent: {
-    messageBefore: "This site uses cookies (Google Analytics) to understand how it is used. See our ",
+    messageBefore: "This site uses cookies (Google Analytics, PostHog) to understand how it is used. See our ",
     policyLink: "Cookie Policy",
     messageAfter: " for details.",
     accept: "Accept",
@@ -982,7 +982,7 @@ const ja: typeof en = {
     legalLanguageNote: "",
   },
   consent: {
-    messageBefore: "本サイトは、利用状況の分析のために Cookie（Google Analytics）を使用します。詳細は",
+    messageBefore: "本サイトは、利用状況の分析のために Cookie（Google Analytics、PostHog）を使用します。詳細は",
     policyLink: "Cookieポリシー",
     messageAfter: "をご覧ください。",
     accept: "同意する",

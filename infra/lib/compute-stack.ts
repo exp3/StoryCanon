@@ -40,6 +40,14 @@ export interface ComputeStackProps extends cdk.StackProps {
    */
   gaMeasurementId?: string;
   /**
+   * PostHog project API key and ingestion host, injected as POSTHOG_KEY /
+   * POSTHOG_HOST. Same runtime-env-var pattern as gaMeasurementId above (not
+   * NEXT_PUBLIC_*) — legal-info.ts reads these server-side, layout.tsx passes
+   * them to the client.
+   */
+  posthogKey?: string;
+  posthogHost?: string;
+  /**
    * When both are set, the ALB serves production over HTTPS with an ACM cert
    * (DNS-validated in the zone) and redirects :80 -> :443. Without them the
    * production listener stays on plain :80.
@@ -135,6 +143,8 @@ export class ComputeStack extends cdk.Stack {
         STRIPE_PRICE_PRO_YEARLY: props.stripePriceProYearly ?? "",
         ADMIN_EMAILS: props.adminEmails ?? "",
         GA_MEASUREMENT_ID: props.gaMeasurementId ?? "",
+        POSTHOG_KEY: props.posthogKey ?? "",
+        POSTHOG_HOST: props.posthogHost ?? "",
       },
       secrets: Object.fromEntries(
         Object.entries(props.secrets.appSecrets).map(([name, secret]) => [

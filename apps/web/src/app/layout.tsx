@@ -5,6 +5,8 @@ import { AnalyticsConsent } from "@/components/analytics-consent";
 import { getDictionary } from "@/lib/i18n";
 import { legalInfo } from "@/lib/legal-info";
 import { resolveLocale } from "@/server/locale";
+import { getSessionUser } from "@/server/session";
+import { getPlan } from "@/server/plan";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +18,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await resolveLocale();
+  const user = await getSessionUser();
+  const plan = user ? await getPlan(user.id) : null;
 
   return (
     <html lang={locale}>
@@ -23,7 +27,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SiteHeader />
         <div className="flex-1">{children}</div>
         <SiteFooter />
-        <AnalyticsConsent gaId={legalInfo.gaMeasurementId} t={getDictionary(locale).consent} />
+        <AnalyticsConsent
+          gaId={legalInfo.gaMeasurementId}
+          posthogKey={legalInfo.posthogKey}
+          posthogHost={legalInfo.posthogHost}
+          userId={user?.id ?? null}
+          plan={plan}
+          t={getDictionary(locale).consent}
+        />
       </body>
     </html>
   );

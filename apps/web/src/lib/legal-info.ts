@@ -46,6 +46,9 @@ export const legalInfo = {
   // 埋め込むため、実行時の環境変数が効かなくなる。この値を読むのは layout.tsx
   // （サーバーコンポーネント）で、そこから props でクライアント側へ渡している。
   gaMeasurementId: process.env.GA_MEASUREMENT_ID ?? "",
+  // 同じ理由で NEXT_PUBLIC_ を付けない。
+  posthogKey: process.env.POSTHOG_KEY ?? "",
+  posthogHost: process.env.POSTHOG_HOST ?? "",
 
   // 更新日（各ページ共通。改定時に更新）
   lastUpdated: "2026-07-12",
