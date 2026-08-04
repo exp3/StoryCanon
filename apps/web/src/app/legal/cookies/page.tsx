@@ -43,7 +43,7 @@ export default function CookiePolicyPage() {
               <code className="mx-1 rounded bg-[#f2f1ec] px-1 text-sm">_ga_*</code>
               （Google Analytics）、
               <code className="mx-1 rounded bg-[#f2f1ec] px-1 text-sm">ph_*_posthog</code>
-              （PostHog）です。PostHog のデータは EU（欧州）リージョンでホスティングされています。分析 Cookie は、利用者が同意した場合にのみ有効になります。
+              （PostHog）です。PostHog のデータは US（米国）リージョンでホスティングされています。分析 Cookie は、利用者が同意した場合にのみ有効になります。
             </p>
           </div>
         </div>
