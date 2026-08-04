@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS, type CountLimitKind } from "@/lib/plan-limits";
 
@@ -18,13 +19,13 @@ export class PlanLimitError extends Error {
   }
 }
 
-export async function getPlan(userId: string) {
+export const getPlan = cache(async (userId: string) => {
   const subscription = await prisma.subscription.findFirst({
     where: { userId, status: { in: ["ACTIVE", "TRIALING"] } },
     orderBy: { updatedAt: "desc" },
   });
   return subscription?.plan ?? "FREE";
-}
+});
 
 function assertLimit(current: number, limit: Limit, message: string) {
   if (limit !== null && current >= limit) {

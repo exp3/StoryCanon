@@ -38,10 +38,12 @@ export default function CookiePolicyPage() {
           <div>
             <p className="font-medium text-[#1d1d1b]">分析 Cookie（同意が必要）</p>
             <p>
-              Google Analytics（Google LLC 提供）により、ページの閲覧状況などを統計的に把握し、サービス改善に利用します。取得される情報には、閲覧ページ、参照元、ブラウザ情報、IPアドレス（匿名化）等が含まれます。代表的な Cookie は
+              Google Analytics（Google LLC 提供）および PostHog（PostHog Inc. 提供）により、ページの閲覧状況や画面上の操作（クリック等）を統計的に把握し、サービス改善に利用します。取得される情報には、閲覧ページ、参照元、ブラウザ情報、IPアドレス（Google Analyticsは匿名化）等が含まれます。ログイン中の利用者については、内部的なユーザーIDおよびプラン種別を PostHog に送信し、機能の利用状況を分析します。画面操作を録画するセッション録画機能は無効にしています。代表的な Cookie は
               <code className="mx-1 rounded bg-[#f2f1ec] px-1 text-sm">_ga</code>
               <code className="mx-1 rounded bg-[#f2f1ec] px-1 text-sm">_ga_*</code>
-              です。分析 Cookie は、利用者が同意した場合にのみ有効になります。
+              （Google Analytics）、
+              <code className="mx-1 rounded bg-[#f2f1ec] px-1 text-sm">ph_*_posthog</code>
+              （PostHog）です。PostHog のデータは EU（欧州）リージョンでホスティングされています。分析 Cookie は、利用者が同意した場合にのみ有効になります。
             </p>
           </div>
         </div>
@@ -74,7 +76,7 @@ export default function CookiePolicyPage() {
           <a className="mx-1 text-[#46605a] underline" href="/legal/privacy">
             プライバシーポリシー
           </a>
-          をご確認ください。Google による情報の取り扱いについては、Google のプライバシーポリシーをご参照ください。
+          をご確認ください。Google および PostHog による情報の取り扱いについては、それぞれの提供元のプライバシーポリシーをご参照ください。
         </p>
       </LegalSection>
     </LegalPage>
