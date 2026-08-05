@@ -1,7 +1,8 @@
 import { createMcpHandler, originValidationResponse } from "@modelcontextprotocol/server";
-import { authenticateBearer } from "@/server/auth-token";
 import type { CurrentActor } from "@/server/http";
+import { REQUIRED_SCOPE, authenticateMcp, isAuthFailure, type McpAuthFailure } from "@/server/mcp-auth";
 import { createStoryCanonMcpServer } from "@/server/mcp-server";
+import { mcpResourceUrl, serverOrigin } from "@/server/oauth-http";
 
 /**
  * The StoryCanon MCP endpoint.
@@ -21,8 +22,6 @@ import { createStoryCanonMcpServer } from "@/server/mcp-server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SCOPES = "storycanon:read storycanon:write";
-
 // The handler is built once: it carries no per-user state, and the actor
 // travels per request via `authInfo`.
 const handler = createMcpHandler((ctx) => {
@@ -41,17 +40,24 @@ function allowedOriginHostnames(req: Request) {
   return [hostname, "localhost", "127.0.0.1", "[::1]"];
 }
 
-function unauthorized(req: Request) {
-  const url = new URL(req.url);
-  const resourceMetadata = `${url.origin}/.well-known/oauth-protected-resource${url.pathname}`;
+/**
+ * The RFC 9728 challenge that points a client at the authorization server.
+ * This is the entire discovery entry point: a client with no token reads
+ * `resource_metadata` from here and follows it to the OAuth endpoints.
+ */
+function challenge(req: Request, failure: McpAuthFailure) {
+  const origin = serverOrigin(req);
+  const resourceMetadata = `${origin}/.well-known/oauth-protected-resource${new URL(req.url).pathname}`;
+  const params = [
+    `error="${failure.error}"`,
+    `error_description="${failure.description}"`,
+    `resource_metadata="${resourceMetadata}"`,
+    `scope="${REQUIRED_SCOPE}"`,
+  ].join(", ");
+
   return Response.json(
-    { jsonrpc: "2.0", error: { code: -32001, message: "Authorization required." }, id: null },
-    {
-      status: 401,
-      headers: {
-        "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadata}", scope="${SCOPES}"`,
-      },
-    },
+    { jsonrpc: "2.0", error: { code: -32001, message: failure.description }, id: null },
+    { status: failure.status, headers: { "WWW-Authenticate": `Bearer ${params}` } },
   );
 }
 
@@ -68,8 +74,8 @@ export async function POST(req: Request) {
   const rejected = originValidationResponse(req, allowedOriginHostnames(req));
   if (rejected) return rejected;
 
-  const actor = await authenticateBearer(req.headers.get("authorization"));
-  if (!actor) return unauthorized(req);
+  const auth = await authenticateMcp(req.headers.get("authorization"), mcpResourceUrl(serverOrigin(req)));
+  if (isAuthFailure(auth)) return challenge(req, auth);
 
   return handler.fetch(req, {
     authInfo: {
@@ -77,9 +83,9 @@ export async function POST(req: Request) {
       // nothing downstream needs it, and it would otherwise ride along into
       // any context the SDK exposes.
       token: "[redacted]",
-      clientId: actor.apiTokenId ?? "storycanon-api-token",
-      scopes: SCOPES.split(" "),
-      extra: { actor },
+      clientId: auth.clientId,
+      scopes: auth.scope.split(" "),
+      extra: { actor: auth.actor },
     },
   });
 }
