@@ -1,0 +1,387 @@
+import { fromJsonSchema, type JsonSchemaType } from "@modelcontextprotocol/server";
+import { AjvJsonSchemaValidator } from "@modelcontextprotocol/server/validators/ajv";
+
+/**
+ * MCP tool definitions.
+ *
+ * Every tool is a thin façade over an existing `handleMcpApi` action, so the
+ * MCP surface and the ChatGPT Actions surface (`/api/mcp/*`, described by
+ * `/mcp-openapi.json`) execute exactly the same code — ownership checks, plan
+ * limits, soft deletes and the mutation log that `rollback_command` undoes.
+ *
+ * Input schemas are hand-written JSON Schema rather than the zod schemas in
+ * `./validation`: those are zod v3 and the MCP SDK speaks zod v4 / Standard
+ * Schema. This is not a second source of truth — the schemas here describe the
+ * call for the model, while `./validation` remains the only thing that
+ * *enforces* anything at runtime.
+ */
+
+const validator = new AjvJsonSchemaValidator();
+
+const projectId = { type: "string", description: "対象作品の ID / The project id." } as const;
+const importance = { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] } as const;
+
+export type McpToolSpec = {
+  name: string;
+  title: string;
+  description: string;
+  /** The `handleMcpApi` action this tool delegates to. */
+  action: string;
+  properties: NonNullable<JsonSchemaType["properties"]>;
+  required?: string[];
+  /** Extra constraint for tools where one of several fields must be present. */
+  anyOf?: JsonSchemaType["anyOf"];
+  readOnly?: boolean;
+  destructive?: boolean;
+};
+
+export const MCP_TOOLS: McpToolSpec[] = [
+  {
+    name: "help",
+    title: "How to use StoryCanon",
+    description:
+      "Explains how to work with StoryCanon: the first-time steps, the typical write loop, and what every other tool does. Call this first if you have not used StoryCanon before.",
+    action: "help",
+    properties: {},
+    readOnly: true,
+  },
+  {
+    name: "list_projects",
+    title: "List works",
+    description: "Lists the signed-in user's works (private novels) with their id, title, genre and last update.",
+    action: "list-private-projects",
+    properties: {},
+    readOnly: true,
+  },
+  {
+    name: "create_project",
+    title: "Create a work",
+    description: "Creates a new private work. Returns the new project id plus a commandId that rollback_command can undo.",
+    action: "create-private-project",
+    properties: {
+      title: { type: "string", description: "作品タイトル / Title of the work." },
+      genre: { type: "string" },
+      premise: { type: "string", description: "作品の前提・あらすじ / One-paragraph premise." },
+      tone: { type: "string" },
+      targetAudience: { type: "string" },
+      writingStyle: { type: "string" },
+      forbiddenElements: { type: "string", description: "書かないでほしい要素 / Elements the author never wants written." },
+      userPreferences: { type: "string" },
+    },
+    required: ["title"],
+  },
+  {
+    name: "update_project",
+    title: "Update a work",
+    description: "Updates a work's title or settings. Only the fields you pass are changed.",
+    action: "update-private-project",
+    properties: {
+      projectId,
+      title: { type: "string" },
+      genre: { type: "string" },
+      premise: { type: "string" },
+      tone: { type: "string" },
+      targetAudience: { type: "string" },
+      writingStyle: { type: "string" },
+      forbiddenElements: { type: "string" },
+      userPreferences: { type: "string" },
+    },
+    required: ["projectId"],
+  },
+  {
+    name: "get_project_context",
+    title: "Get the current state of a work",
+    description:
+      "Returns everything needed to write the next scene: the work's settings, the latest story state, the cast, active plot threads, unresolved foreshadowing and the mysteries. Call this before writing.",
+    action: "get-private-project-context",
+    properties: { projectId },
+    required: ["projectId"],
+    readOnly: true,
+  },
+  {
+    name: "get_next_generation_context",
+    title: "Get context for the next scene",
+    description: "Alias of get_project_context, kept for parity with the ChatGPT integration. Returns the same payload.",
+    action: "get-next-generation-context",
+    properties: { projectId },
+    required: ["projectId"],
+    readOnly: true,
+  },
+  {
+    name: "consult_title",
+    title: "Brainstorm titles",
+    description:
+      "Returns the context and guidance needed to propose title candidates for a work. Writes nothing — apply a chosen title with update_project.",
+    action: "consult-title",
+    properties: {
+      projectId,
+      direction: { type: "string", description: "希望する方向性やキーワード / Desired direction or keywords." },
+      count: { type: "integer", description: "候補数 3〜12(既定 6)/ How many candidates, 3-12 (default 6)." },
+    },
+    required: ["projectId"],
+    readOnly: true,
+  },
+  {
+    name: "save_scene",
+    title: "Save a scene",
+    description:
+      "Saves generated prose as a scene, recorded as written by AI. If chapterTitle names a chapter that does not exist yet it is created. Returns a commandId that rollback_command can undo.",
+    action: "save-generated-scene",
+    properties: {
+      projectId,
+      title: { type: "string", description: "シーンのタイトル / Scene title." },
+      sceneTitle: { type: "string", description: "title の別名(どちらか一方でよい)/ Alias for title." },
+      body: { type: "string", description: "本文 / The prose itself." },
+      summary: { type: "string" },
+      occurredEvents: { type: "string", description: "このシーンで起きたこと / What happened in this scene." },
+      chapterId: { type: "string" },
+      chapterTitle: { type: "string", description: "章タイトル。無ければ作成される / Chapter title; created when missing." },
+      generationPrompt: { type: "string" },
+    },
+    // The OpenAPI spec only requires projectId + body, but the server's zod
+    // schema also requires a title — so a caller that omits it always gets a
+    // 400. Requiring it here keeps the model from making that mistake.
+    required: ["projectId", "title", "body"],
+  },
+  {
+    name: "save_character",
+    title: "Save a character",
+    description:
+      "Creates or updates a character. Pass characterId to update a specific one, or name alone to update the character with that name (creating it when absent).",
+    action: "save-character",
+    properties: {
+      projectId,
+      characterId: { type: "string", description: "更新対象の ID(新規なら省略)/ Omit when creating." },
+      name: { type: "string", description: "キャラクター名 / Character name." },
+      role: { type: "string", description: "物語上の役割 / Role in the story." },
+      age: { type: "string" },
+      personality: { type: "string" },
+      speechStyle: { type: "string", description: "口調 / How they speak." },
+      appearance: { type: "string" },
+      background: { type: "string" },
+      goal: { type: "string" },
+      secret: { type: "string" },
+      currentState: { type: "string" },
+    },
+    required: ["projectId"],
+    // Without characterId the handler falls through to the create path, whose
+    // zod schema requires a name — so a call with neither always 400s.
+    anyOf: [{ required: ["characterId"] }, { required: ["name"] }],
+  },
+  {
+    name: "save_character_note",
+    title: "Save a character note",
+    description: "Saves a note about a character. An unknown characterName is created automatically.",
+    action: "save-character-note",
+    properties: {
+      projectId,
+      characterId: { type: "string" },
+      characterName: { type: "string" },
+      title: { type: "string" },
+      body: { type: "string" },
+      category: { type: "string", enum: ["INNER", "RELATIONSHIP", "BACKGROUND", "SPEECH", "PLOT", "OTHER"] },
+      importance,
+      relatedSceneId: { type: "string" },
+    },
+    required: ["projectId", "body"],
+  },
+  {
+    name: "save_world_note",
+    title: "Save a world note",
+    description: "Saves a world-building note (place, organization, technology, history, culture, item or rule).",
+    action: "save-world-note",
+    properties: {
+      projectId,
+      title: { type: "string" },
+      body: { type: "string" },
+      category: {
+        type: "string",
+        enum: ["PLACE", "ORGANIZATION", "TECHNOLOGY", "HISTORY", "CULTURE", "ITEM", "RULE", "OTHER"],
+      },
+      importance,
+      relatedSceneId: { type: "string" },
+    },
+    required: ["projectId", "title", "body"],
+  },
+  {
+    name: "save_foreshadowing",
+    title: "Save foreshadowing",
+    description: "Records a piece of foreshadowing: where it was planted, how it is meant to pay off, and whether it has.",
+    action: "save-foreshadowing",
+    properties: {
+      projectId,
+      title: { type: "string" },
+      description: { type: "string" },
+      plantedSceneId: { type: "string" },
+      plannedResolution: { type: "string" },
+      resolvedSceneId: { type: "string" },
+      status: { type: "string", enum: ["UNPLANTED", "PLANTED", "IN_PROGRESS", "RESOLVED", "DROPPED"] },
+      importance,
+    },
+    required: ["projectId", "title", "description"],
+  },
+  {
+    name: "save_mystery",
+    title: "Save a mystery",
+    description: "Records a mystery: the question, the truth, who knows it, the clues and the reveal point.",
+    action: "save-mystery",
+    properties: {
+      projectId,
+      scope: { type: "string", enum: ["CENTRAL", "ARC", "EPISODE", "SCENE"] },
+      question: { type: "string" },
+      truth: { type: "string" },
+      knownBy: { type: "string" },
+      clues: { type: "string" },
+      revealPoint: { type: "string" },
+    },
+    required: ["projectId", "question"],
+  },
+  {
+    name: "save_plot_thread",
+    title: "Save a plot thread",
+    description: "Records a plot thread: what is running, where it stands, and what would resolve it.",
+    action: "save-plot-thread",
+    properties: {
+      projectId,
+      title: { type: "string" },
+      description: { type: "string" },
+      status: { type: "string", enum: ["NOT_STARTED", "IN_PROGRESS", "ON_HOLD", "RESOLVED", "DROPPED"] },
+      startSceneId: { type: "string" },
+      currentState: { type: "string" },
+      resolutionCondition: { type: "string" },
+    },
+    required: ["projectId", "title"],
+  },
+  {
+    name: "save_revision_todo",
+    title: "Save a revision TODO",
+    description: "Records something to fix later: the problem, a suggested fix and a priority.",
+    action: "save-revision-todo",
+    properties: {
+      projectId,
+      title: { type: "string" },
+      problem: { type: "string" },
+      suggestion: { type: "string" },
+      priority: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+      status: { type: "string", enum: ["OPEN", "IN_PROGRESS", "DONE", "ON_HOLD", "DROPPED"] },
+      chapterId: { type: "string" },
+      sceneId: { type: "string" },
+    },
+    required: ["projectId", "title", "problem"],
+  },
+  {
+    name: "save_story_state",
+    title: "Save the story state",
+    description:
+      "Appends a snapshot of where the story now stands. Save one after writing so the next session starts from the right place.",
+    action: "save-story-state-snapshot",
+    properties: {
+      projectId,
+      summary: { type: "string" },
+      recentEvents: { type: "string" },
+      characterStates: { type: "string" },
+      unresolvedProblems: { type: "string" },
+      unresolvedForeshadowings: { type: "string" },
+      activePlotThreads: { type: "string" },
+      nextOptions: { type: "string" },
+      avoidElements: { type: "string" },
+      writingRules: { type: "string" },
+      userPreferences: { type: "string" },
+    },
+    required: ["projectId", "summary"],
+  },
+  {
+    name: "delete_project_data",
+    title: "Delete data from a work",
+    description:
+      "Logically deletes one record under a work (or the work itself when targetType is PROJECT). Nothing is physically removed, and the returned undoToken restores it via rollback_command.",
+    action: "delete-project-data",
+    properties: {
+      projectId,
+      targetType: {
+        type: "string",
+        enum: [
+          "PROJECT",
+          "CHAPTER",
+          "SCENE",
+          "CHARACTER",
+          "CHARACTER_NOTE",
+          "WORLD_NOTE",
+          "FORESHADOWING",
+          "MYSTERY",
+          "PLOT_THREAD",
+          "REVISION_TODO",
+          "STORY_STATE_SNAPSHOT",
+        ],
+      },
+      targetId: { type: "string", description: "削除対象の ID。targetType が PROJECT なら省略可 / Optional when targetType is PROJECT." },
+      reason: { type: "string" },
+    },
+    required: ["projectId", "targetType"],
+    destructive: true,
+  },
+  {
+    name: "rollback_command",
+    title: "Undo a specific change",
+    description:
+      "Undoes one save, update or delete by its commandId, or a whole transaction by transactionId. Pass force to undo even when a later change touched the same record.",
+    action: "rollback-command",
+    properties: {
+      projectId,
+      commandId: { type: "string" },
+      transactionId: { type: "string" },
+      force: { type: "boolean" },
+    },
+    required: ["projectId"],
+    destructive: true,
+  },
+  {
+    name: "undo_last_command",
+    title: "Undo the last change",
+    description: "Undoes the most recent change made to a work.",
+    action: "undo-last-command",
+    properties: { projectId, force: { type: "boolean" } },
+    required: ["projectId"],
+    destructive: true,
+  },
+];
+
+/** Converts a spec's properties into the Standard Schema the SDK advertises and validates against. */
+export function toolInputSchema(spec: McpToolSpec) {
+  const schema: JsonSchemaType = {
+    type: "object",
+    properties: spec.properties,
+    required: spec.required ?? [],
+    additionalProperties: false,
+    ...(spec.anyOf ? { anyOf: spec.anyOf } : {}),
+  };
+  return fromJsonSchema<Record<string, unknown>>(schema, validator);
+}
+
+export function describeFailure(status: number, contentType: string, body: string) {
+  // `requireOwnedProject` and friends throw a plain-text 404, so the body is
+  // not always JSON — never assume it parses.
+  if (contentType.includes("application/json") && body) return body;
+  return `HTTP ${status}: ${body || "(empty response)"}`;
+}
+
+export type McpToolResult = {
+  content: Array<{ type: "text"; text: string }>;
+  isError?: boolean;
+};
+
+/**
+ * Shapes one API response into an MCP tool result.
+ *
+ * A 4xx comes back as a tool error rather than a JSON-RPC error: the model
+ * caused it (bad arguments, unknown id, plan limit) and can usually fix it on
+ * the next call, so it needs to see the message. A 5xx is a genuine failure
+ * and is signalled by returning null so the caller can throw.
+ */
+export function toToolResult(status: number, contentType: string, body: string): McpToolResult | null {
+  if (status >= 200 && status < 300) {
+    return { content: [{ type: "text", text: body || "{}" }] };
+  }
+  if (status >= 500) return null;
+  return { content: [{ type: "text", text: describeFailure(status, contentType, body) }], isError: true };
+}

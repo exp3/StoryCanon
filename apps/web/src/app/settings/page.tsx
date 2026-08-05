@@ -64,6 +64,7 @@ export default async function SettingsPage({
   const host = headerList.get("host");
   const protocol = headerList.get("x-forwarded-proto") ?? "https";
   const openApiUrl = `${protocol}://${host}/mcp-openapi.json`;
+  const mcpUrl = `${protocol}://${host}/mcp`;
 
   function formatDate(date: Date | null) {
     if (!date) return null;
@@ -260,6 +261,16 @@ export default async function SettingsPage({
           <li>{t.step4}</li>
           <li>{t.step5}</li>
         </ol>
+      </section>
+
+      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
+        <h2 className="mb-3 text-xl font-semibold">{t.mcpHeading}</h2>
+        <p className="mb-3 text-sm leading-6 text-[#4b4b45]">{t.mcpIntro}</p>
+        <span className="mb-3 flex items-center gap-2">
+          <code className="block flex-1 break-all rounded bg-[#f7f7f4] p-2 text-xs">{mcpUrl}</code>
+          <CopyButton value={mcpUrl} />
+        </span>
+        <p className="text-sm leading-6 text-[#4b4b45]">{t.mcpAuth}</p>
       </section>
 
       <section>

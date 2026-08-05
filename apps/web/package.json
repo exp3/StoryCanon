@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@prisma/client": "^6.1.0",
     "bcryptjs": "^2.4.3",
     "next": "^15.1.3",
