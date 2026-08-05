@@ -99,6 +99,20 @@ export const createRevisionTodoSchema = z.object({
   source: z.enum(["USER", "CHATGPT"]).default("USER"),
 });
 
+export const createTimelineEventSchema = z.object({
+  title: z.string().min(1).max(160),
+  description: z.string().max(10000).optional(),
+  /** In-story date as free text, e.g. "Imperial year 302, spring". */
+  occurredAt: z.string().max(120).optional(),
+  order: z.number().int().nonnegative().optional(),
+  characterIds: z.array(z.string()).max(200).default([]),
+  tagIds: z.array(z.string()).max(200).default([]),
+});
+
+export const createTimelineTagSchema = z.object({
+  name: z.string().min(1).max(60),
+});
+
 export const grantPlanSchema = z.object({
   email: z.string().email().max(320),
   plan: z.enum(["FREE", "PLUS", "PRO"]),

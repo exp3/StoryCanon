@@ -38,8 +38,8 @@ describe("landing dictionary parity", () => {
 
   // The framework section claims "12 entity types" in prose elsewhere; keep the
   // list honest if the schema grows.
-  it("lists twelve project entities", () => {
-    expect(en.landing.framework.entities).toHaveLength(12);
+  it("lists thirteen project entities", () => {
+    expect(en.landing.framework.entities).toHaveLength(13);
   });
 });
 
