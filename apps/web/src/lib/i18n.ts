@@ -305,6 +305,9 @@ const en = {
     tagNameLabel: "Tag name",
     tagCreate: "Add tag",
     tagDelete: "Delete",
+    reorderHandle: "Drag to reorder",
+    reorderHint: "Drag a card by its handle to reorder it, or focus the handle and use the up and down arrow keys.",
+    reorderPosition: "{title}: position {position} of {total}",
   },
   exportPage: {
     title: "Export",
@@ -953,6 +956,9 @@ const ja: typeof en = {
     tagNameLabel: "タグ名",
     tagCreate: "タグを追加",
     tagDelete: "削除",
+    reorderHandle: "ドラッグで並び替え",
+    reorderHint: "カード左のハンドルをドラッグすると並び替えできます。ハンドルにフォーカスして上下の矢印キーでも移動できます。",
+    reorderPosition: "{title}: {total}件中 {position}番目",
   },
   exportPage: {
     title: "エクスポート",

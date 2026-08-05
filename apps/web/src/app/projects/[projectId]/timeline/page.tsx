@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDictionary, type Dictionary } from "@/lib/i18n";
 import { requireSessionUser } from "@/server/session";
 import { createTimelineEventSchema, createTimelineTagSchema } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
+import { TimelineReorderList } from "@/components/timeline-reorder-list";
 
 type SearchParams = { character?: string | string[]; tag?: string | string[] };
 
@@ -267,6 +269,38 @@ export default async function TimelinePage({
     redirect(listPath);
   }
 
+  /**
+   * Drag-and-drop reordering. The client sends where the event landed relative
+   * to its visible neighbours, never a whole permutation: the server then
+   * recomputes the sequence from the rows as they are now, so a stale or
+   * repeated call converges on the same result instead of shuffling the list.
+   * Anchoring on a neighbour also keeps events hidden by a filter in place.
+   */
+  async function moveEvent(eventId: string, afterId: string | null, beforeId: string | null) {
+    "use server";
+
+    await requireOwnedProject(projectId);
+    const all = await prisma.timelineEvent.findMany({
+      where: { projectId, deletedAt: null },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      select: { id: true },
+    });
+    const ids = all.map((event) => event.id);
+    if (!ids.includes(eventId)) return;
+
+    const rest = ids.filter((id) => id !== eventId);
+    let index: number;
+    if (afterId && rest.includes(afterId)) index = rest.indexOf(afterId) + 1;
+    else if (beforeId && rest.includes(beforeId)) index = rest.indexOf(beforeId);
+    else return;
+
+    const next = [...rest.slice(0, index), eventId, ...rest.slice(index)];
+    if (next.join(",") === ids.join(",")) return;
+
+    await prisma.$transaction(next.map((id, order) => prisma.timelineEvent.update({ where: { id }, data: { order } })));
+    revalidatePath(`/projects/${projectId}/timeline`);
+  }
+
   async function deleteEvent(eventId: string) {
     "use server";
 
@@ -405,64 +439,72 @@ export default async function TimelinePage({
       {events.length === 0 ? (
         <p className="text-sm text-[#555]">{filtering ? t.filterEmpty : t.empty}</p>
       ) : (
-        <ol className="space-y-3">
-          {events.map((event) => (
-            <li key={event.id} className="rounded border bg-white p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  {event.occurredAt ? <p className="text-xs text-[#315247]">{event.occurredAt}</p> : null}
-                  <p className="mt-1 font-medium">{event.title}</p>
+        <TimelineReorderList
+          action={moveEvent}
+          labels={{ handle: t.reorderHandle, hint: t.reorderHint, position: t.reorderPosition }}
+          items={events.map((event) => ({
+            id: event.id,
+            label: event.title,
+            card: (
+              <>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    {event.occurredAt ? <p className="text-xs text-[#315247]">{event.occurredAt}</p> : null}
+                    <p className="mt-1 font-medium">{event.title}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-xs text-[#666]">
+                      {t.orderLabel} {event.order}
+                    </span>
+                    <CopyButton
+                      labels={copy}
+                      value={[
+                        event.occurredAt ? `${event.occurredAt} ${event.title}` : event.title,
+                        event.description ?? "",
+                        event.characters.length > 0 ? `${t.charactersLabel}: ${event.characters.map((item) => item.name).join(", ")}` : "",
+                        event.tags.length > 0 ? `${t.tagsLabel}: ${event.tags.map((item) => item.name).join(", ")}` : "",
+                      ]
+                        .filter(Boolean)
+                        .join("\n")}
+                    />
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs text-[#666]">
-                    {t.orderLabel} {event.order}
-                  </span>
-                  <CopyButton
-                    labels={copy}
-                    value={[
-                      event.occurredAt ? `${event.occurredAt} ${event.title}` : event.title,
-                      event.description ?? "",
-                      event.characters.length > 0 ? `${t.charactersLabel}: ${event.characters.map((item) => item.name).join(", ")}` : "",
-                      event.tags.length > 0 ? `${t.tagsLabel}: ${event.tags.map((item) => item.name).join(", ")}` : "",
-                    ]
-                      .filter(Boolean)
-                      .join("\n")}
-                  />
-                </div>
-              </div>
-              {event.description ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#555]">{event.description}</p> : null}
-              {event.characters.length > 0 ? (
-                <p className="mt-2 text-sm text-[#4b4b45]">
-                  {t.charactersLabel}: {event.characters.map((item) => item.name).join(", ")}
-                </p>
-              ) : null}
-              {event.tags.length > 0 ? (
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {event.tags.map((tag) => (
-                    <li key={tag.id} className="rounded border border-[#ece8dd] px-2 py-1 text-xs text-[#4b4b45]">
-                      {tag.name}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+                {event.description ? (
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#555]">{event.description}</p>
+                ) : null}
+                {event.characters.length > 0 ? (
+                  <p className="mt-2 text-sm text-[#4b4b45]">
+                    {t.charactersLabel}: {event.characters.map((item) => item.name).join(", ")}
+                  </p>
+                ) : null}
+                {event.tags.length > 0 ? (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {event.tags.map((tag) => (
+                      <li key={tag.id} className="rounded border border-[#ece8dd] px-2 py-1 text-xs text-[#4b4b45]">
+                        {tag.name}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
 
-              <details className="mt-3">
-                <summary className="cursor-pointer text-xs text-[#4b4b45]">{copy.edit}</summary>
-                <form className="mt-3 space-y-4" action={updateEvent.bind(null, event.id)}>
-                  <EventFields t={t} characters={characters} tags={tags} event={event} defaultOrder={event.order} />
-                  <button className="rounded bg-black px-4 py-2 text-sm text-white" type="submit">
-                    {copy.saveChanges}
-                  </button>
-                </form>
-                <form className="mt-3" action={deleteEvent.bind(null, event.id)}>
-                  <button className="rounded border border-[#e3b8b3] px-3 py-1 text-xs text-[#a3352b]" type="submit">
-                    {t.delete}
-                  </button>
-                </form>
-              </details>
-            </li>
-          ))}
-        </ol>
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-xs text-[#4b4b45]">{copy.edit}</summary>
+                  <form className="mt-3 space-y-4" action={updateEvent.bind(null, event.id)}>
+                    <EventFields t={t} characters={characters} tags={tags} event={event} defaultOrder={event.order} />
+                    <button className="rounded bg-black px-4 py-2 text-sm text-white" type="submit">
+                      {copy.saveChanges}
+                    </button>
+                  </form>
+                  <form className="mt-3" action={deleteEvent.bind(null, event.id)}>
+                    <button className="rounded border border-[#e3b8b3] px-3 py-1 text-xs text-[#a3352b]" type="submit">
+                      {t.delete}
+                    </button>
+                  </form>
+                </details>
+              </>
+            ),
+          }))}
+        />
       )}
     </main>
   );
