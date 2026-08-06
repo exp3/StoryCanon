@@ -252,6 +252,8 @@ export async function GET(req: NextRequest) {
               "PLOT_THREAD",
               "REVISION_TODO",
               "STORY_STATE_SNAPSHOT",
+              "TIMELINE_EVENT",
+              "TIMELINE_TAG",
             ],
           },
           targetId: { type: "string" },

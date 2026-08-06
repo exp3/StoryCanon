@@ -25,8 +25,13 @@ export type McpToolSpec = {
   name: string;
   title: string;
   description: string;
-  /** The `handleMcpApi` action this tool delegates to. */
-  action: string;
+  /**
+   * Where the tool sends its arguments. Most tools reuse a `handleMcpApi`
+   * action; the read tools reuse the REST routes in `handleWebApi`, which
+   * already have the list and fetch endpoints the action surface never grew.
+   */
+  action?: string;
+  route?: { method: "GET" | "POST"; path: (args: Record<string, unknown>) => string[] };
   properties: NonNullable<JsonSchemaType["properties"]>;
   required?: string[];
   /** Extra constraint for tools where one of several fields must be present. */
@@ -34,6 +39,8 @@ export type McpToolSpec = {
   readOnly?: boolean;
   destructive?: boolean;
 };
+
+const str = (args: Record<string, unknown>, key: string) => String(args[key] ?? "");
 
 export const MCP_TOOLS: McpToolSpec[] = [
   {
@@ -312,6 +319,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
           "PLOT_THREAD",
           "REVISION_TODO",
           "STORY_STATE_SNAPSHOT",
+          "TIMELINE_EVENT",
+          "TIMELINE_TAG",
         ],
       },
       targetId: { type: "string", description: "削除対象の ID。targetType が PROJECT なら省略可 / Optional when targetType is PROJECT." },
@@ -343,6 +352,125 @@ export const MCP_TOOLS: McpToolSpec[] = [
     properties: { projectId, force: { type: "boolean" } },
     required: ["projectId"],
     destructive: true,
+  },
+
+  // Reading back what was saved. The action surface can write all of these but
+  // could only read a few of them, which left a model unable to check its own
+  // work without re-fetching the whole project context.
+  ...([
+    ["list_chapters", "chapters", "Lists the chapters of a work, in order."],
+    ["list_scenes", "scenes", "Lists the scenes of a work, in reading order, including their body text."],
+    ["list_characters", "characters", "Lists the characters of a work with their full profiles."],
+    ["list_world_notes", "world-notes", "Lists the world notes of a work."],
+    ["list_foreshadowings", "foreshadowings", "Lists the foreshadowing recorded for a work, including resolved items."],
+    ["list_mysteries", "mysteries", "Lists the mysteries recorded for a work."],
+    ["list_plot_threads", "plot-threads", "Lists the plot threads of a work, including finished ones."],
+    ["list_revision_todos", "revision-todos", "Lists the revision TODOs of a work, including completed ones."],
+    ["list_story_states", "story-state-snapshots", "Lists the story state snapshots of a work, newest first."],
+  ] as const).map(([name, collection, description]): McpToolSpec => ({
+    name,
+    title: name.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()),
+    description,
+    route: { method: "GET", path: (args) => ["projects", str(args, "projectId"), collection] },
+    properties: { projectId },
+    required: ["projectId"],
+    readOnly: true,
+  })),
+  {
+    name: "get_scene",
+    title: "Get a scene",
+    description: "Fetches one scene by id, including its full body text.",
+    route: { method: "GET", path: (args) => ["scenes", str(args, "sceneId")] },
+    properties: { sceneId: { type: "string", description: "シーンの ID / The scene id." } },
+    required: ["sceneId"],
+    readOnly: true,
+  },
+  {
+    name: "get_character",
+    title: "Get a character",
+    description: "Fetches one character by id, with the full profile.",
+    route: { method: "GET", path: (args) => ["characters", str(args, "characterId")] },
+    properties: { characterId: { type: "string", description: "キャラクターの ID / The character id." } },
+    required: ["characterId"],
+    readOnly: true,
+  },
+  {
+    name: "list_character_notes",
+    title: "List character notes",
+    description: "Lists the notes saved against one character.",
+    route: { method: "GET", path: (args) => ["characters", str(args, "characterId"), "notes"] },
+    properties: { characterId: { type: "string" } },
+    required: ["characterId"],
+    readOnly: true,
+  },
+  {
+    name: "get_latest_story_state",
+    title: "Get the latest story state",
+    description: "Fetches only the most recent story state snapshot, without the rest of the project context.",
+    route: { method: "GET", path: (args) => ["projects", str(args, "projectId"), "story-state", "latest"] },
+    properties: { projectId },
+    required: ["projectId"],
+    readOnly: true,
+  },
+  {
+    name: "export_project",
+    title: "Export a work",
+    description:
+      "Exports the whole work as one document. Markdown and plain text are available on every plan; JSON needs a paid plan.",
+    route: { method: "GET", path: (args) => ["projects", str(args, "projectId"), "export", str(args, "format") || "markdown"] },
+    properties: {
+      projectId,
+      format: { type: "string", enum: ["markdown", "text", "json"], description: "既定は markdown / Defaults to markdown." },
+    },
+    required: ["projectId"],
+    readOnly: true,
+  },
+
+  // Timeline. Until now this existed only in the web UI, so neither ChatGPT
+  // nor an MCP client could see when anything happened in the story.
+  {
+    name: "list_timeline_events",
+    title: "List timeline events",
+    description:
+      "Lists the in-story events of a work in chronological order, with the characters involved and the tags on each.",
+    route: { method: "GET", path: (args) => ["projects", str(args, "projectId"), "timeline-events"] },
+    properties: { projectId },
+    required: ["projectId"],
+    readOnly: true,
+  },
+  {
+    name: "save_timeline_event",
+    title: "Save a timeline event",
+    description:
+      "Records something that happens in the story. The in-story date is free text; `order` is what the timeline sorts by, and defaults to the end.",
+    route: { method: "POST", path: (args) => ["projects", str(args, "projectId"), "timeline-events"] },
+    properties: {
+      projectId,
+      title: { type: "string", description: "出来事 / What happens." },
+      description: { type: "string" },
+      occurredAt: { type: "string", description: "作中の日時。自由記述 / In-story date, free text (e.g. \"Imperial year 302, spring\")." },
+      order: { type: "integer", description: "並び順。省略すると末尾 / Sort position; appended when omitted." },
+      characterIds: { type: "array", items: { type: "string" }, description: "関わるキャラクターの ID / Characters involved." },
+      tagIds: { type: "array", items: { type: "string" }, description: "タグの ID。list_timeline_tags で取得 / Tag ids from list_timeline_tags." },
+    },
+    required: ["projectId", "title"],
+  },
+  {
+    name: "list_timeline_tags",
+    title: "List timeline tags",
+    description: "Lists the tags available for timeline events in a work.",
+    route: { method: "GET", path: (args) => ["projects", str(args, "projectId"), "timeline-tags"] },
+    properties: { projectId },
+    required: ["projectId"],
+    readOnly: true,
+  },
+  {
+    name: "save_timeline_tag",
+    title: "Save a timeline tag",
+    description: "Creates a timeline tag, or revives one with the same name that was removed earlier.",
+    route: { method: "POST", path: (args) => ["projects", str(args, "projectId"), "timeline-tags"] },
+    properties: { projectId, name: { type: "string", description: "タグ名 / Tag name." } },
+    required: ["projectId", "name"],
   },
 ];
 

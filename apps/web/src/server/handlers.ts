@@ -13,6 +13,8 @@ import {
   createRevisionTodoSchema,
   createSceneSchema,
   createStoryStateSnapshotSchema,
+  createTimelineEventSchema,
+  createTimelineTagSchema,
   createWorldNoteSchema,
 } from "./validation";
 import { errorResponse, json, type CurrentActor } from "./http";
@@ -30,7 +32,9 @@ type TargetType =
   | "MYSTERY"
   | "PLOT_THREAD"
   | "REVISION_TODO"
-  | "STORY_STATE_SNAPSHOT";
+  | "STORY_STATE_SNAPSHOT"
+  | "TIMELINE_EVENT"
+  | "TIMELINE_TAG";
 
 type TargetConfig = {
   targetType: TargetType;
@@ -62,6 +66,23 @@ const mutationTargets: Record<TargetType, TargetConfig> = {
     delegate: prisma.storyStateSnapshot,
     responseKey: "storyStateSnapshot",
     updateSchema: createStoryStateSnapshotSchema,
+    projectIdOf: (r) => String(r.projectId),
+  },
+  TIMELINE_EVENT: {
+    targetType: "TIMELINE_EVENT",
+    delegate: prisma.timelineEvent,
+    responseKey: "timelineEvent",
+    // The relation ids are omitted: this schema drives the generic PATCH path,
+    // which writes straight through to Prisma, and `characterIds` / `tagIds`
+    // are not columns. Relations are set explicitly in the POST route below.
+    updateSchema: createTimelineEventSchema.omit({ characterIds: true, tagIds: true }),
+    projectIdOf: (r) => String(r.projectId),
+  },
+  TIMELINE_TAG: {
+    targetType: "TIMELINE_TAG",
+    delegate: prisma.timelineTag,
+    responseKey: "timelineTag",
+    updateSchema: createTimelineTagSchema,
     projectIdOf: (r) => String(r.projectId),
   },
 };
@@ -247,6 +268,8 @@ async function handleIndividualRoute(method: string, path: string[], actor: Curr
     "plot-threads": mutationTargets.PLOT_THREAD,
     "revision-todos": mutationTargets.REVISION_TODO,
     "story-state-snapshots": mutationTargets.STORY_STATE_SNAPSHOT,
+    "timeline-events": mutationTargets.TIMELINE_EVENT,
+    "timeline-tags": mutationTargets.TIMELINE_TAG,
   };
   const config = routeMap[path[0]];
   const id = path[1];
@@ -417,6 +440,93 @@ export async function handleWebApi(method: string, path: string[], actor: Curren
           const input = createStoryStateSnapshotSchema.parse(body);
           const { record, commandId: undoToken } = await createWithLog(mutationTargets.STORY_STATE_SNAPSHOT, actor, projectId, { ...input, projectId });
           return json({ storyStateSnapshot: record, commandId: undoToken }, { status: 201 });
+        }
+      }
+      if (collection === "timeline-events") {
+        if (method === "GET") {
+          return json({
+            timelineEvents: await prisma.timelineEvent.findMany({
+              where: { projectId, deletedAt: null },
+              orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+              include: {
+                characters: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } },
+                tags: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } },
+              },
+            }),
+          });
+        }
+        if (method === "POST") {
+          const input = createTimelineEventSchema.parse(body);
+          // Relation ids come from the caller, so they are re-checked against
+          // this project before being connected — otherwise an event could be
+          // linked to another project's character.
+          const [characters, tags] = await Promise.all([
+            input.characterIds.length === 0
+              ? []
+              : prisma.character.findMany({ where: { projectId, deletedAt: null, id: { in: input.characterIds } }, select: { id: true } }),
+            input.tagIds.length === 0
+              ? []
+              : prisma.timelineTag.findMany({ where: { projectId, deletedAt: null, id: { in: input.tagIds } }, select: { id: true } }),
+          ]);
+          const order = input.order ?? (await prisma.timelineEvent.count({ where: { projectId, deletedAt: null } }));
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.TIMELINE_EVENT, actor, projectId, {
+            projectId,
+            title: input.title,
+            description: input.description ?? null,
+            occurredAt: input.occurredAt ?? null,
+            order,
+            characters: { connect: characters.map(({ id }) => ({ id })) },
+            tags: { connect: tags.map(({ id }) => ({ id })) },
+          });
+          // Read the relations back so the caller can see what was actually
+          // linked, and name anything that was dropped — an id that belongs to
+          // another project is skipped, and silently succeeding would leave a
+          // caller believing a link exists.
+          const timelineEvent = await prisma.timelineEvent.findUniqueOrThrow({
+            where: { id: record.id },
+            include: {
+              characters: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } },
+              tags: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } },
+            },
+          });
+          const connected = new Set([...characters, ...tags].map(({ id }) => id));
+          const skipped = [...input.characterIds, ...input.tagIds].filter((id) => !connected.has(id));
+          return json({ timelineEvent, commandId: undoToken, ...(skipped.length > 0 ? { skippedIds: skipped } : {}) }, { status: 201 });
+        }
+      }
+      if (collection === "timeline-tags") {
+        if (method === "GET") {
+          return json({
+            timelineTags: await prisma.timelineTag.findMany({ where: { projectId, deletedAt: null }, orderBy: { name: "asc" } }),
+          });
+        }
+        if (method === "POST") {
+          const input = createTimelineTagSchema.parse(body);
+          // [projectId, name] is unique across soft-deleted rows too, so a name
+          // that was removed earlier is revived rather than colliding.
+          const existing = await prisma.timelineTag.findFirst({ where: { projectId, name: input.name } });
+          if (existing) {
+            if (!existing.deletedAt) return json({ timelineTag: existing, created: false });
+            // Reviving is a mutation like any other, so it gets a log entry and
+            // a commandId — otherwise this would be the one write in the app
+            // that rollback_command cannot undo.
+            const timelineTag = await prisma.timelineTag.update({ where: { id: existing.id }, data: { deletedAt: null } });
+            const log = await recordMutation({
+              actor,
+              projectId,
+              action: "UPDATE",
+              targetType: "TIMELINE_TAG",
+              targetId: timelineTag.id,
+              beforeSnapshot: snapshot(existing),
+              afterSnapshot: snapshot(timelineTag),
+            });
+            return json({ timelineTag, commandId: log.commandId, created: false, revived: true });
+          }
+          const { record, commandId: undoToken } = await createWithLog(mutationTargets.TIMELINE_TAG, actor, projectId, {
+            projectId,
+            name: input.name,
+          });
+          return json({ timelineTag: record, commandId: undoToken, created: true }, { status: 201 });
         }
       }
       if (collection === "reading-progress") {
@@ -724,6 +834,16 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
           foreshadowings: { where: { deletedAt: null, status: { in: ["UNPLANTED", "PLANTED", "IN_PROGRESS"] } } },
           mysteries: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } },
           storyStateSnapshots: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, take: 1 },
+          // In-story chronology: without it the model has to infer when things
+          // happened from the prose it is about to continue.
+          timelineEvents: {
+            where: { deletedAt: null },
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+            include: {
+              characters: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } },
+              tags: { where: { deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } },
+            },
+          },
         },
       });
       return json({
@@ -733,6 +853,7 @@ export async function handleMcpApi(action: string, actor: CurrentActor, body: Bo
         activePlotThreads: project.plotThreads,
         unresolvedForeshadowings: project.foreshadowings,
         mysteries: project.mysteries,
+        timeline: project.timelineEvents,
       });
     }
     if (action === "save-generated-scene") {
