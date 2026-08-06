@@ -1,17 +1,20 @@
 import { McpServer } from "@modelcontextprotocol/server";
-import { handleMcpApi } from "./handlers";
-import { MCP_TOOLS, describeFailure, toToolResult, toolInputSchema } from "./mcp-tools";
+import { handleMcpApi, handleWebApi } from "./handlers";
+import { MCP_TOOLS, describeFailure, toToolResult, toolInputSchema, type McpToolSpec } from "./mcp-tools";
 import type { CurrentActor } from "./http";
 
-/** Runs one `handleMcpApi` action on behalf of `actor` and shapes the result for MCP. */
-async function runMcpAction(action: string, actor: CurrentActor, args: Record<string, unknown>) {
-  const response = await handleMcpApi(action, actor, args);
+/** Runs one tool on behalf of `actor` and shapes the result for MCP. */
+async function runTool(spec: McpToolSpec, actor: CurrentActor, args: Record<string, unknown>) {
+  const response = spec.action
+    ? await handleMcpApi(spec.action, actor, args)
+    : await handleWebApi(spec.route!.method, spec.route!.path(args), actor, args);
+
   const contentType = response.headers.get("content-type") ?? "";
   const body = await response.text();
 
   const result = toToolResult(response.status, contentType, body);
   if (!result) {
-    throw new Error(`StoryCanon failed to run "${action}": ${describeFailure(response.status, contentType, body)}`);
+    throw new Error(`StoryCanon failed to run "${spec.name}": ${describeFailure(response.status, contentType, body)}`);
   }
   return result;
 }
@@ -46,7 +49,7 @@ export function createStoryCanonMcpServer(actor: CurrentActor) {
           destructiveHint: spec.destructive ?? false,
         },
       },
-      async (args) => runMcpAction(spec.action, actor, (args ?? {}) as Record<string, unknown>),
+      async (args) => runTool(spec, actor, (args ?? {}) as Record<string, unknown>),
     );
   }
 

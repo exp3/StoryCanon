@@ -30,6 +30,54 @@ describe("tool definitions", () => {
     }
   });
 
+  it("gives every tool exactly one place to send its arguments", () => {
+    for (const tool of MCP_TOOLS) {
+      expect(Boolean(tool.action) !== Boolean(tool.route), tool.name).toBe(true);
+    }
+  });
+
+  it("builds route paths from the arguments the schema declares", () => {
+    for (const tool of MCP_TOOLS) {
+      if (!tool.route) continue;
+      const args = Object.fromEntries((tool.required ?? []).map((key) => [key, `test-${key}`]));
+      const path = tool.route.path(args);
+      // An empty segment means a required argument never reached the path and
+      // the request would silently hit the wrong route.
+      expect(path.every((segment) => segment.length > 0), `${tool.name}: ${path.join("/")}`).toBe(true);
+    }
+  });
+
+  it("routes the project-scoped reads through the project", () => {
+    const listScenes = MCP_TOOLS.find((tool) => tool.name === "list_scenes");
+    expect(listScenes?.route?.path({ projectId: "p1" })).toEqual(["projects", "p1", "scenes"]);
+    const getScene = MCP_TOOLS.find((tool) => tool.name === "get_scene");
+    expect(getScene?.route?.path({ sceneId: "s1" })).toEqual(["scenes", "s1"]);
+  });
+
+  it("defaults the export format rather than building a broken path", () => {
+    const exportProject = MCP_TOOLS.find((tool) => tool.name === "export_project");
+    expect(exportProject?.route?.path({ projectId: "p1" })).toEqual(["projects", "p1", "export", "markdown"]);
+    expect(exportProject?.route?.path({ projectId: "p1", format: "json" })).toEqual(["projects", "p1", "export", "json"]);
+  });
+
+  it("marks every read-only tool as GET", () => {
+    for (const tool of MCP_TOOLS) {
+      if (tool.route && tool.readOnly) expect(tool.route.method, tool.name).toBe("GET");
+      if (tool.route?.method === "GET") expect(tool.readOnly, tool.name).toBe(true);
+    }
+  });
+
+  it("lets delete_project_data name every type the server can delete", () => {
+    // The handler's mutationTargets and this enum have to stay in step: a type
+    // missing here is rejected by schema validation before the handler ever
+    // sees it, so the tool silently cannot delete something the API supports.
+    const deleteTool = MCP_TOOLS.find((tool) => tool.name === "delete_project_data");
+    const targetType = deleteTool?.properties.targetType as { enum?: string[] };
+    expect(targetType.enum).toEqual(
+      expect.arrayContaining(["PROJECT", "SCENE", "CHARACTER", "TIMELINE_EVENT", "TIMELINE_TAG"]),
+    );
+  });
+
   it("compiles every input schema", () => {
     for (const tool of MCP_TOOLS) {
       expect(() => toolInputSchema(tool), tool.name).not.toThrow();
