@@ -341,7 +341,7 @@ const en = {
     revealWarning: "This will never be shown again once you leave this page. Copy it now.",
     connectionHeading: "Connecting with ChatGPT",
     connectionIntro:
-      "StoryCanon doesn't yet support ChatGPT's \"Connectors\"/MCP server setting (planned for later). For now, connect using a Custom GPT's Actions feature.",
+      "Connect ChatGPT using a Custom GPT's Actions feature. StoryCanon now also runs an MCP server — see the section below for clients that speak the Model Context Protocol.",
     step1: "Issue an API token above and copy the value.",
     step2: "In ChatGPT, open \"Create a GPT\" and go to the \"Configure\" tab.",
     step3: "Choose \"Actions\" → \"Create new action\" → \"Import from URL\", and paste the URL below.",
@@ -353,6 +353,14 @@ const en = {
       "StoryCanon also speaks the Model Context Protocol. Point an MCP client at this endpoint to read and write your works from Claude Code, Codex, or anything else that supports remote MCP servers.",
     mcpAuth:
       "Authenticate with an API token from this page, sent as an Authorization: Bearer header. In Claude Code: claude mcp add --transport http storycanon <URL> --header \"Authorization: Bearer <token>\"",
+    mcpOAuth:
+      "Clients that support OAuth — such as connectors in Claude — can connect with the URL alone: they will send you here to sign in and approve the connection, and no token needs to be copied.",
+    connectedAppsHeading: "Connected apps",
+    connectedAppsEmpty: "No app has been connected yet.",
+    connectedAppsIntro: "Apps you approved through the connection screen. Disconnecting revokes their access immediately.",
+    connectedAppsConnected: "Connected:",
+    connectedAppsScope: "Permissions:",
+    disconnect: "Disconnect",
     issuedTokensHeading: "Issued Tokens",
     noTokens: "No tokens issued yet.",
     revoke: "Revoke",
@@ -402,6 +410,23 @@ const en = {
     billingNoCustomer: "Subscribe to a paid plan first to manage billing.",
     billingNotConfigured: "Billing is not set up yet. Please try again later.",
     billingComingSoon: "Paid plans are not available yet.",
+  },
+  oauthConsent: {
+    title: "Connect an app to StoryCanon",
+    intro: "This app is asking to use your StoryCanon account:",
+    scopeRead: "Read your works, characters, world notes and story state",
+    scopeWrite: "Create and update works, and undo changes it made",
+    accountLabel: "Signed in as",
+    redirectLabel: "You will be sent back to:",
+    approve: "Allow",
+    deny: "Cancel",
+    revokeHint: "You can disconnect the app at any time from Settings.",
+    invalidClientTitle: "Unknown app",
+    invalidClientDetail:
+      "This app is not registered with StoryCanon, so the connection was stopped. Try connecting again from the app.",
+    invalidRedirectTitle: "Invalid return address",
+    invalidRedirectDetail:
+      "The address the app asked to be sent back to is not one it registered. Nothing was shared, and the connection was stopped.",
   },
   onboarding: {
     title: "Welcome to StoryCanon",
@@ -1006,7 +1031,7 @@ const ja: typeof en = {
     revealWarning: "この画面を離れると二度と表示されません。今すぐコピーしてください。",
     connectionHeading: "ChatGPTとの接続方法",
     connectionIntro:
-      "StoryCanonは現時点ではChatGPTの「コネクタ」「MCPサーバー」設定には対応していません(将来対応予定)。今は Custom GPTのActions機能を使って接続します。",
+      "ChatGPT とは Custom GPT の Actions 機能で接続します。StoryCanon は MCP サーバーも提供するようになったため、Model Context Protocol に対応したクライアントは下のセクションを参照してください。",
     step1: "上のフォームでAPIトークンを発行し、値をコピーする。",
     step2: "ChatGPTで「GPTを作成する(Create a GPT)」を開き、「Configure」タブに移動する。",
     step3: "「Actions」→「Create new action」→「Import from URL」を選び、次のURLを貼り付ける。",
@@ -1017,6 +1042,14 @@ const ja: typeof en = {
       "StoryCanon は Model Context Protocol にも対応しています。MCP クライアントから下記のエンドポイントを指定すると、Claude Code や Codex など、リモート MCP サーバーに対応したツールから作品を読み書きできます。",
     mcpAuth:
       "認証はこのページで発行した API トークンを Authorization: Bearer ヘッダーで送ります。Claude Code の場合: claude mcp add --transport http storycanon <URL> --header \"Authorization: Bearer <トークン>\"",
+    mcpOAuth:
+      "OAuth に対応したクライアント(Claude のコネクタなど)は、URL を入れるだけで接続できます。その場合はこの画面に飛んでログインと許可を行うため、トークンをコピーする必要はありません。",
+    connectedAppsHeading: "連携中のアプリ",
+    connectedAppsEmpty: "まだ連携しているアプリはありません。",
+    connectedAppsIntro: "接続画面で許可したアプリの一覧です。解除するとアクセス権はすぐ失効します。",
+    connectedAppsConnected: "連携日時:",
+    connectedAppsScope: "許可した権限:",
+    disconnect: "連携を解除",
     issuedTokensHeading: "発行済みトークン",
     noTokens: "発行済みのトークンはありません。",
     revoke: "失効",
@@ -1066,6 +1099,21 @@ const ja: typeof en = {
     billingNoCustomer: "請求情報を管理するには、まず有料プランに登録してください。",
     billingNotConfigured: "課金機能は準備中です。しばらくしてから再度お試しください。",
     billingComingSoon: "有料プランは現在準備中です。",
+  },
+  oauthConsent: {
+    title: "アプリを StoryCanon に接続",
+    intro: "次のアプリが、あなたの StoryCanon アカウントの利用を求めています:",
+    scopeRead: "作品・キャラクター・世界観・物語状態の読み取り",
+    scopeWrite: "作品の作成と更新、および自分が行った変更の取り消し",
+    accountLabel: "ログイン中のアカウント:",
+    redirectLabel: "接続後の戻り先:",
+    approve: "許可する",
+    deny: "キャンセル",
+    revokeHint: "連携はいつでも設定画面から解除できます。",
+    invalidClientTitle: "不明なアプリです",
+    invalidClientDetail: "このアプリは StoryCanon に登録されていないため、接続を中止しました。アプリ側からやり直してください。",
+    invalidRedirectTitle: "戻り先が不正です",
+    invalidRedirectDetail: "アプリが指定した戻り先は、そのアプリが登録した URL ではありません。情報は渡さずに接続を中止しました。",
   },
   onboarding: {
     title: "StoryCanonへようこそ",

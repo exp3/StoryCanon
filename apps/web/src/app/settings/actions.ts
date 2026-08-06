@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isLocale } from "@/lib/i18n";
+import { revokeGrant } from "@/server/oauth-store";
 import { requireSessionUser } from "@/server/session";
 
 export type CreateApiTokenState = {
@@ -38,6 +39,12 @@ export async function revokeApiToken(formData: FormData) {
     where: { id, userId: user.id, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  revalidatePath("/settings");
+}
+
+export async function disconnectOAuthGrant(formData: FormData) {
+  const user = await requireSessionUser("/settings");
+  await revokeGrant(user.id, String(formData.get("grantId") ?? ""));
   revalidatePath("/settings");
 }
 

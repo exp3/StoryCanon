@@ -5,7 +5,8 @@ import { isBillingLive } from "@/lib/billing-config";
 import { getDictionary, localeTag } from "@/lib/i18n";
 import { PLAN_LIMITS } from "@/server/plan";
 import { requireSessionUser } from "@/server/session";
-import { revokeApiToken, updateLocale } from "./actions";
+import { listGrants } from "@/server/oauth-store";
+import { disconnectOAuthGrant, revokeApiToken, updateLocale } from "./actions";
 import { createBillingPortalSession, createCheckoutSession } from "./billing-actions";
 import { CreateTokenForm } from "./token-form";
 
@@ -25,6 +26,7 @@ export default async function SettingsPage({
     where: { userId: user.id },
     orderBy: { updatedAt: "desc" },
   });
+  const grants = await listGrants(user.id);
   const plan = subscription && ["ACTIVE", "TRIALING"].includes(subscription.status) ? subscription.plan : "FREE";
   const planLabels = { FREE: t.planFree, PLUS: t.planPlus, PRO: t.planPro };
   const planLabel = planLabels[plan];
@@ -271,6 +273,37 @@ export default async function SettingsPage({
           <CopyButton value={mcpUrl} />
         </span>
         <p className="text-sm leading-6 text-[#4b4b45]">{t.mcpAuth}</p>
+        <p className="mt-3 text-sm leading-6 text-[#4b4b45]">{t.mcpOAuth}</p>
+      </section>
+
+      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
+        <h2 className="mb-3 text-xl font-semibold">{t.connectedAppsHeading}</h2>
+        <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.connectedAppsIntro}</p>
+        {grants.length === 0 ? (
+          <p className="text-sm text-[#4b4b45]">{t.connectedAppsEmpty}</p>
+        ) : (
+          <ul className="space-y-3">
+            {grants.map((grant) => (
+              <li key={grant.id} className="flex items-start justify-between gap-4 rounded border border-[#ece8dd] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="break-all font-medium text-[#1d1d1b]">{grant.client.clientName || grant.client.clientId}</p>
+                  <p className="mt-1 text-xs text-[#666]">
+                    {t.connectedAppsConnected} {grant.createdAt.toLocaleString(localeTag(user.locale))}
+                  </p>
+                  <p className="mt-1 break-all text-xs text-[#666]">
+                    {t.connectedAppsScope} {grant.scope}
+                  </p>
+                </div>
+                <form action={disconnectOAuthGrant}>
+                  <input type="hidden" name="grantId" value={grant.id} />
+                  <button className="shrink-0 rounded border border-red-600 px-3 py-1 text-xs text-red-600" type="submit">
+                    {t.disconnect}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>

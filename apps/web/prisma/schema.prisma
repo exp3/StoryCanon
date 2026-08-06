@@ -115,6 +115,7 @@ model User {
   auditLogs             AuditLog[]
   mutationLogs          MutationLog[]
   readingProgress       ReadingProgress[]
+  oauthGrants           OAuthGrant[]
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 }
@@ -177,6 +178,88 @@ model ApiToken {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tokenPrefix])
+}
+
+/// An MCP client registered through RFC 7591 dynamic client registration.
+/// Public clients only — no secret is issued, so PKCE is what proves the
+/// token request came from the same client that started the flow.
+model OAuthClient {
+  id           String       @id @default(cuid())
+  clientId     String       @unique
+  clientName   String?
+  redirectUris String[]
+  grantTypes   String[]
+  scope        String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  grants       OAuthGrant[]
+
+  @@index([createdAt])
+}
+
+/// One user's standing consent for one client. Everything issued to that pair
+/// hangs off this row, so revoking a connection is a single delete.
+model OAuthGrant {
+  id        String                   @id @default(cuid())
+  clientId  String
+  userId    String
+  scope     String
+  resource  String?
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  client    OAuthClient              @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codes     OAuthAuthorizationCode[]
+  tokens    OAuthToken[]
+
+  @@unique([clientId, userId])
+  @@index([userId])
+}
+
+/// A single-use authorization code. Short-lived and stored hashed, so a leaked
+/// database row cannot be replayed against the token endpoint.
+model OAuthAuthorizationCode {
+  id            String     @id @default(cuid())
+  codeHash      String     @unique
+  grantId       String
+  redirectUri   String
+  codeChallenge String
+  scope         String
+  resource      String?
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  grant         OAuthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+enum OAuthTokenKind {
+  ACCESS
+  REFRESH
+}
+
+/// Access and refresh tokens. Opaque and hashed rather than JWTs: the database
+/// is already on the request path, and revocation has to take effect at once.
+model OAuthToken {
+  id           String         @id @default(cuid())
+  grantId      String
+  kind         OAuthTokenKind
+  tokenPrefix  String
+  tokenHash    String         @unique
+  scope        String
+  resource     String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  /// Set on a refresh token when rotation replaces it, so replaying the old
+  /// one is detectable.
+  replacedById String?
+  lastUsedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  grant        OAuthGrant     @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([tokenPrefix, kind])
+  @@index([grantId])
 }
 
 model Project {
