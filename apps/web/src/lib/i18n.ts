@@ -348,6 +348,11 @@ const en = {
     step4:
       "Set \"Authentication\" to \"API Key\" with Auth Type \"Bearer\", and paste the token you copied in step 1.",
     step5: "Save, and the GPT can now create projects, fetch state, save body text, and more.",
+    mcpHeading: "MCP server (for Claude, Codex and other MCP clients)",
+    mcpIntro:
+      "StoryCanon also speaks the Model Context Protocol. Point an MCP client at this endpoint to read and write your works from Claude Code, Codex, or anything else that supports remote MCP servers.",
+    mcpAuth:
+      "Authenticate with an API token from this page, sent as an Authorization: Bearer header. In Claude Code: claude mcp add --transport http storycanon <URL> --header \"Authorization: Bearer <token>\"",
     issuedTokensHeading: "Issued Tokens",
     noTokens: "No tokens issued yet.",
     revoke: "Revoke",
@@ -1007,6 +1012,11 @@ const ja: typeof en = {
     step3: "「Actions」→「Create new action」→「Import from URL」を選び、次のURLを貼り付ける。",
     step4: "「Authentication」を「API Key」に設定し、Auth Typeを「Bearer」にして、手順1でコピーしたトークンを貼り付ける。",
     step5: "保存すれば、そのGPTから作品の作成・状態取得・本文保存などが行えるようになる。",
+    mcpHeading: "MCPサーバー(Claude・Codex など向け)",
+    mcpIntro:
+      "StoryCanon は Model Context Protocol にも対応しています。MCP クライアントから下記のエンドポイントを指定すると、Claude Code や Codex など、リモート MCP サーバーに対応したツールから作品を読み書きできます。",
+    mcpAuth:
+      "認証はこのページで発行した API トークンを Authorization: Bearer ヘッダーで送ります。Claude Code の場合: claude mcp add --transport http storycanon <URL> --header \"Authorization: Bearer <トークン>\"",
     issuedTokensHeading: "発行済みトークン",
     noTokens: "発行済みのトークンはありません。",
     revoke: "失効",
