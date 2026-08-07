@@ -1,14 +1,32 @@
 import { z } from "zod";
 
+// The project form mirrors these as `maxLength` on its inputs, so a long paste
+// is capped by the browser instead of coming back as a server-side 400.
+export const projectFieldLimits = {
+  title: 120,
+  genre: 80,
+  premise: 5000,
+  tone: 1000,
+  targetAudience: 1000,
+  writingStyle: 2000,
+  forbiddenElements: 2000,
+  userPreferences: 2000,
+} as const;
+
+// Null is accepted so a caller — the web form or an AI client — can clear a
+// field that was set before. Without it the only way to "empty" a value is to
+// write "", which reads back differently from a value that was never set.
+const optionalText = (max: number) => z.string().max(max).nullable().optional();
+
 export const createProjectSchema = z.object({
-  title: z.string().min(1).max(120),
-  genre: z.string().max(80).optional(),
-  premise: z.string().max(5000).optional(),
-  tone: z.string().max(1000).optional(),
-  targetAudience: z.string().max(1000).optional(),
-  writingStyle: z.string().max(2000).optional(),
-  forbiddenElements: z.string().max(2000).optional(),
-  userPreferences: z.string().max(2000).optional(),
+  title: z.string().min(1).max(projectFieldLimits.title),
+  genre: optionalText(projectFieldLimits.genre),
+  premise: optionalText(projectFieldLimits.premise),
+  tone: optionalText(projectFieldLimits.tone),
+  targetAudience: optionalText(projectFieldLimits.targetAudience),
+  writingStyle: optionalText(projectFieldLimits.writingStyle),
+  forbiddenElements: optionalText(projectFieldLimits.forbiddenElements),
+  userPreferences: optionalText(projectFieldLimits.userPreferences),
 });
 
 export const createChapterSchema = z.object({

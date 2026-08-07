@@ -5,10 +5,24 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary, localeTag, type Dictionary, type Locale } from "@/lib/i18n";
 import { handleWebApi } from "@/server/handlers";
 import { requireSessionUser } from "@/server/session";
-import { createProjectSchema } from "@/server/validation";
+import { createProjectSchema, projectFieldLimits } from "@/server/validation";
 import { CopyButton } from "@/components/copy-button";
 import { DeleteProjectDialog } from "@/components/delete-project-dialog";
+import { EditableContent } from "@/components/editable-content";
 import { ProjectTitleEditor } from "@/components/project-title-editor";
+
+// Everything on Project except the title, which has its own inline editor in
+// the header. Keeping one list means the form, the read view and the server
+// action can never drift out of sync.
+const settingFields = [
+  { name: "genre", label: "labelGenre", kind: "text" },
+  { name: "premise", label: "labelPremise", kind: "textarea" },
+  { name: "tone", label: "labelTone", kind: "text" },
+  { name: "targetAudience", label: "labelTargetAudience", kind: "text" },
+  { name: "writingStyle", label: "labelWritingStyle", kind: "textarea" },
+  { name: "forbiddenElements", label: "labelForbiddenElements", kind: "textarea" },
+  { name: "userPreferences", label: "labelUserPreferences", kind: "textarea" },
+] as const satisfies ReadonlyArray<{ name: string; label: keyof Dictionary["projectDetail"]; kind: "text" | "textarea" }>;
 
 function tabsFor(projectId: string, t: Dictionary["projectDetail"]) {
   return [
@@ -93,6 +107,42 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     redirect(`/projects/${projectId}`);
   }
 
+  // Closed over by the server action below. Only the seven strings, not the
+  // whole `project` with its scenes and characters — Next serialises whatever
+  // an inline action captures into the payload sent to the browser.
+  const currentSettings = Object.fromEntries(settingFields.map((field) => [field.name, project[field.name] ?? ""]));
+
+  async function updateProjectSettings(formData: FormData) {
+    "use server";
+
+    const currentUser = await requireSessionUser();
+
+    // Only fields the author actually changed are sent. Submitting the whole
+    // form back would rewrite all seven columns on every save: unset NULLs
+    // would become "", each save would log a mutation even when nothing moved,
+    // and anything an AI client wrote while this form sat open would be
+    // silently reverted. Cleared fields go back as null so "emptied" and
+    // "never set" stay the same thing.
+    const input: Record<string, string | null> = {};
+    for (const field of settingFields) {
+      const next = String(formData.get(field.name) ?? "").trim();
+      if (next !== currentSettings[field.name]) input[field.name] = next === "" ? null : next;
+    }
+
+    if (Object.keys(input).length > 0) {
+      // Goes through the same handler as PATCH /api/projects/:id, so an edit
+      // made here is validated, ownership checked and written to the mutation
+      // log exactly like one made by an AI client — and stays undoable via
+      // rollback.
+      const response = await handleWebApi("PATCH", ["projects", projectId], { userId: currentUser.id, via: "web" }, input);
+      if (response.status === 404) notFound();
+      if (!response.ok) throw new Error(`Failed to update project ${projectId}: ${response.status}`);
+    }
+
+    revalidatePath(`/projects/${projectId}`, "layout");
+    redirect(`/projects/${projectId}`);
+  }
+
   async function deleteProject() {
     "use server";
 
@@ -129,7 +179,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           />
         </div>
         {project.genre ? <p className="mt-2 text-sm text-[#315247]">{project.genre}</p> : null}
-        {project.premise ? <p className="mt-4 max-w-3xl text-sm leading-6 text-[#555]">{project.premise}</p> : null}
       </header>
 
       <nav className="mb-6 flex flex-wrap gap-2">
@@ -142,6 +191,36 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
       <section className="grid gap-4 md:grid-cols-[1fr_320px]">
         <div className="space-y-4">
+          <section id="settings" className="rounded border bg-white p-4">
+            <h2 className="mb-3 font-semibold">{t.settingsHeading}</h2>
+            <EditableContent
+              action={updateProjectSettings}
+              labels={{ edit: copy.edit, save: copy.saveChanges, cancel: copy.cancel }}
+              fields={settingFields.map((field) => ({
+                name: field.name,
+                label: t[field.label],
+                kind: field.kind,
+                value: project[field.name] ?? "",
+                maxLength: projectFieldLimits[field.name],
+              }))}
+            >
+              {settingFields.some((field) => project[field.name]) ? (
+                <dl className="space-y-3">
+                  {settingFields
+                    .filter((field) => project[field.name])
+                    .map((field) => (
+                      <div key={field.name}>
+                        <dt className="text-xs text-[#666]">{t[field.label]}</dt>
+                        <dd className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[#555]">{project[field.name]}</dd>
+                      </div>
+                    ))}
+                </dl>
+              ) : (
+                <p className="text-sm leading-6 text-[#555]">{t.emptySettings}</p>
+              )}
+            </EditableContent>
+          </section>
+
           <section id="scenes" className="rounded border bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">{t.scenesHeading}</h2>

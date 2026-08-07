@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { assertCanCreateProject } from "@/server/plan";
 import { requireSessionUser } from "@/server/session";
-import { createProjectSchema } from "@/server/validation";
+import { createProjectSchema, projectFieldLimits } from "@/server/validation";
 
 export default async function NewProjectPage() {
   const user = await requireSessionUser("/projects/new");
@@ -43,19 +43,19 @@ export default async function NewProjectPage() {
       >
         <label className="block">
           <span className="text-sm font-medium">{t.labelTitle}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="title" required />
+          <input className="mt-1 w-full rounded border px-3 py-2" name="title" required maxLength={projectFieldLimits.title} />
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelGenre}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="genre" />
+          <input className="mt-1 w-full rounded border px-3 py-2" name="genre" maxLength={projectFieldLimits.genre} />
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelPremise}</span>
-          <textarea className="mt-1 min-h-32 w-full rounded border px-3 py-2" name="premise" />
+          <textarea className="mt-1 min-h-32 w-full rounded border px-3 py-2" name="premise" maxLength={projectFieldLimits.premise} />
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelTone}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="tone" />
+          <input className="mt-1 w-full rounded border px-3 py-2" name="tone" maxLength={projectFieldLimits.tone} />
         </label>
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
           {t.save}
