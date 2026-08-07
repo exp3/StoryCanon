@@ -9,6 +9,10 @@ export type EditableField = {
   kind?: "text" | "textarea" | "select";
   options?: string[];
   required?: boolean;
+  // Mirrors the server-side zod cap. Without it an over-long paste only fails
+  // once submitted, and the error unmounts the form along with everything the
+  // author had typed into the other fields.
+  maxLength?: number;
 };
 
 type Props = {
@@ -20,6 +24,17 @@ type Props = {
 
 export function EditableContent({ action, fields, labels, children }: Props) {
   const [editing, setEditing] = useState(false);
+
+  // The server action redirects back to the same route, which re-renders this
+  // component with the saved values but leaves `editing` — and the already
+  // dirty inputs — untouched. Without this the form stays open still showing
+  // the pre-edit text, so a successful save looks like it did nothing.
+  const saved = JSON.stringify(fields.map((field) => field.value));
+  const [lastSaved, setLastSaved] = useState(saved);
+  if (lastSaved !== saved) {
+    setLastSaved(saved);
+    setEditing(false);
+  }
 
   if (!editing) {
     return (
@@ -44,9 +59,9 @@ export function EditableContent({ action, fields, labels, children }: Props) {
               {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           ) : field.kind === "textarea" ? (
-            <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name={field.name} defaultValue={field.value} required={field.required} />
+            <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" name={field.name} defaultValue={field.value} required={field.required} maxLength={field.maxLength} />
           ) : (
-            <input className="mt-1 w-full rounded border px-3 py-2" name={field.name} defaultValue={field.value} required={field.required} />
+            <input className="mt-1 w-full rounded border px-3 py-2" name={field.name} defaultValue={field.value} required={field.required} maxLength={field.maxLength} />
           )}
         </label>
       ))}
