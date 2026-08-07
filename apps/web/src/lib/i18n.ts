@@ -463,7 +463,7 @@ const en = {
     meta: {
       title: "StoryCanon — a structured, private story bible",
       description:
-        "Scenes, characters, worldbuilding, foreshadowing and plot threads — everything you decide while building a story, kept in one fixed shape. Connects directly to ChatGPT, and works just as well without any AI.",
+        "Scenes, characters, worldbuilding, foreshadowing and plot threads — everything you decide while building a story, kept in one fixed shape. Connects directly to Claude, ChatGPT and other MCP clients, and works just as well without any AI.",
     },
     nav: {
       audience: "Who it's for",
@@ -480,7 +480,7 @@ const en = {
       titleLine1: "A place to keep",
       titleLine2: "what you're making.",
       lead:
-        "Scenes, characters, worldbuilding, foreshadowing, plot threads. Everything you decide while building a story, kept in one fixed shape. It connects directly to ChatGPT, and works just as well without any AI.",
+        "Scenes, characters, worldbuilding, foreshadowing, plot threads. Everything you decide while building a story, kept in one fixed shape. It connects directly to Claude, ChatGPT and other MCP clients, and works just as well without any AI.",
       primaryCta: "Start for free",
       secondaryCta: "See the structure",
       note: "A StoryCanon account is required. Sign in with Google.",
@@ -586,9 +586,9 @@ const en = {
         "StoryCanon does not generate text itself. It is the place your AI writes into — so the story it helps you build is still there tomorrow, and still yours to change your mind about.",
       points: [
         {
-          title: "Connect it to ChatGPT once",
+          title: "Connect your AI once",
           body:
-            "A few steps in Settings and ChatGPT can read and write your project directly. No plugin, no browser extension, nothing to install.",
+            "A few steps in Settings and your assistant can read and write your project directly. No plugin, no browser extension, nothing to install.",
         },
         {
           title: "Stop pasting your setting in every time",
@@ -603,9 +603,40 @@ const en = {
         {
           title: "You can always tell who wrote what",
           body:
-            "Scenes and revision TODOs remember whether they came from you or from ChatGPT, so a draft you meant to rewrite never quietly becomes canon.",
+            "Scenes and revision TODOs remember whether they came from you or from an assistant, so a draft you meant to rewrite never quietly becomes canon.",
         },
       ],
+      mcpHeading: "Connect over MCP",
+      mcpLead:
+        "StoryCanon runs a Model Context Protocol server, so it fits the tool you already use. Any MCP client can point at a single endpoint and work with your project — one URL and a sign-in, with nothing to install on either side.",
+      clients: [
+        {
+          name: "Claude",
+          body:
+            "Add StoryCanon as a connector and approve it in the browser — the URL alone is enough, with no token to copy anywhere. Claude Code connects with a single `claude mcp add` command, carrying an API token from your Settings page.",
+        },
+        {
+          name: "ChatGPT",
+          body:
+            "Connect through a Custom GPT's Actions with the published OpenAPI schema and an API token, or over MCP wherever your ChatGPT plan supports remote MCP servers.",
+        },
+        {
+          name: "Ollama",
+          body:
+            "Prefer to keep the model on your own machine? Use an MCP client that runs against Ollama and it reaches the same endpoint, so your text goes to a model you host rather than to a hosted service.",
+        },
+      ],
+      clientsNote:
+        "Anything else that speaks MCP works the same way. The endpoint and the connection steps — plus an API token, for the clients that need one — are all on the Settings page once you sign in.",
+      trademarksHeading: "About the product names above",
+      trademarks: [
+        "Claude and Anthropic are trademarks of Anthropic PBC.",
+        "ChatGPT and OpenAI are trademarks of OpenAI, Inc. and its affiliates.",
+        "Ollama is a trademark of Ollama Inc.",
+        "Model Context Protocol (MCP) is an open specification originally created by Anthropic PBC.",
+      ],
+      trademarksNote:
+        "StoryCanon is an independent service, and is not affiliated with, endorsed by or sponsored by any of these companies. Their names appear here only to identify the tools StoryCanon can connect to.",
     },
     solo: {
       heading: "Just as useful without any AI.",
@@ -1159,7 +1190,7 @@ const ja: typeof en = {
     meta: {
       title: "StoryCanon — 構造のある、プライベートな創作データベース",
       description:
-        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ChatGPTと直接つなげられますが、AIを使わずシナリオと世界観の整理だけに使うこともできます。",
+        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ClaudeやChatGPTなどMCP対応のツールと直接つなげられますが、AIを使わずシナリオと世界観の整理だけに使うこともできます。",
     },
     nav: {
       audience: "こんな方へ",
@@ -1176,7 +1207,7 @@ const ja: typeof en = {
       titleLine1: "つくるものを、",
       titleLine2: "置いておく場所。",
       lead:
-        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ChatGPTと直接つなげられますが、AIを使わずに使っても過不足なく機能します。",
+        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ClaudeやChatGPTなどMCP対応のツールと直接つなげられますが、AIを使わずに使っても過不足なく機能します。",
       primaryCta: "無料ではじめる",
       secondaryCta: "構造を見る",
       note: "ご利用にはStoryCanonアカウントが必要です。Googleアカウントでログインします。",
@@ -1281,9 +1312,9 @@ const ja: typeof en = {
         "StoryCanon自身は文章を生成しません。AIが書き込む先として設計されています。だから、AIと一緒につくった物語が明日も残っていて、あとから考え直すこともできます。",
       points: [
         {
-          title: "ChatGPTとは一度つなぐだけ",
+          title: "AIとは一度つなぐだけ",
           body:
-            "設定画面で数ステップ進めれば、ChatGPTがあなたの作品を直接読み書きできるようになります。プラグインもブラウザ拡張も、インストールするものは何もありません。",
+            "設定画面で数ステップ進めれば、AIがあなたの作品を直接読み書きできるようになります。プラグインもブラウザ拡張も、インストールするものは何もありません。",
         },
         {
           title: "毎回、設定を貼り直さなくていい",
@@ -1298,9 +1329,40 @@ const ja: typeof en = {
         {
           title: "どちらが書いたかが必ず残ります",
           body:
-            "シーンと改稿TODOには、自分が書いたのかChatGPTが書いたのかが記録されます。書き直すつもりだった下書きが、いつのまにか正式版になってしまうことがありません。",
+            "シーンと改稿TODOには、自分が書いたのかAIが書いたのかが記録されます。書き直すつもりだった下書きが、いつのまにか正式版になってしまうことがありません。",
         },
       ],
+      mcpHeading: "MCPでつなぐ",
+      mcpLead:
+        "StoryCanonはModel Context Protocol(MCP)のサーバーを提供しています。だから、いま使っているツールからそのまま使えます。MCPに対応したクライアントでひとつのエンドポイントを指定するだけで、作品を読み書きできます。URLとログインだけで済み、どちら側にもインストールするものはありません。",
+      clients: [
+        {
+          name: "Claude",
+          body:
+            "コネクタとしてStoryCanonを追加し、ブラウザで許可するだけです。URLだけで接続でき、トークンをコピーして貼る必要はありません。Claude Codeの場合は、設定ページで発行したAPIトークンを添えて `claude mcp add` のコマンド1行で接続できます。",
+        },
+        {
+          name: "ChatGPT",
+          body:
+            "Custom GPTのActions機能から、公開しているOpenAPIスキーマとAPIトークンで接続できます。リモートMCPサーバーに対応したプランであれば、MCP経由でも接続できます。",
+        },
+        {
+          name: "Ollama",
+          body:
+            "モデルを手元で動かしたい場合にも。Ollamaを利用するMCPクライアントから同じエンドポイントに接続でき、本文を渡す相手を外部のサービスではなく、自分で動かしているモデルにできます。",
+        },
+      ],
+      clientsNote:
+        "MCPに対応したツールであれば、ほかのものでも同じようにつながります。エンドポイントと接続手順、そしてトークンが必要なクライアント向けのAPIトークン発行は、ログイン後の設定ページにまとめてあります。",
+      trademarksHeading: "上記の製品名について",
+      trademarks: [
+        "Claude および Anthropic は Anthropic PBC の商標です。",
+        "ChatGPT および OpenAI は OpenAI, Inc. およびその関連会社の商標です。",
+        "Ollama は Ollama Inc. の商標です。",
+        "Model Context Protocol(MCP)は Anthropic PBC が策定・公開したオープンな仕様です。",
+      ],
+      trademarksNote:
+        "StoryCanonは独立したサービスであり、これらの企業と提携・推奨・後援などの関係はありません。各製品名は、StoryCanonが接続できるツールを示す目的でのみ記載しています。",
     },
     solo: {
       heading: "AIを使わなくても、そのまま使えます。",

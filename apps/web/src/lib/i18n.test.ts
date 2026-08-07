@@ -21,6 +21,8 @@ describe("landing dictionary parity", () => {
     ["framework.lifecycles", en.landing.framework.lifecycles, ja.landing.framework.lifecycles],
     ["framework.fixedFields", en.landing.framework.fixedFields, ja.landing.framework.fixedFields],
     ["ai.points", en.landing.ai.points, ja.landing.ai.points],
+    ["ai.clients", en.landing.ai.clients, ja.landing.ai.clients],
+    ["ai.trademarks", en.landing.ai.trademarks, ja.landing.ai.trademarks],
     ["solo.points", en.landing.solo.points, ja.landing.solo.points],
     ["flow.steps", en.landing.flow.steps, ja.landing.flow.steps],
     ["policy.points", en.landing.policy.points, ja.landing.policy.points],
@@ -40,6 +42,15 @@ describe("landing dictionary parity", () => {
   // list honest if the schema grows.
   it("lists thirteen project entities", () => {
     expect(en.landing.framework.entities).toHaveLength(13);
+  });
+
+  // Every product named in the MCP client list is someone else's trademark, so
+  // a fourth client must not ship without its attribution line.
+  it.each(locales)("attributes every named MCP client for %s", (locale) => {
+    const { clients, trademarks } = getDictionary(locale).landing.ai;
+    for (const client of clients) {
+      expect(trademarks.some((line) => line.includes(client.name))).toBe(true);
+    }
   });
 });
 
