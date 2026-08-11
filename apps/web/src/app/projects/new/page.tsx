@@ -11,7 +11,8 @@ export default async function NewProjectPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 text-3xl font-semibold">{t.title}</h1>
+      <h1 className="mb-2 text-3xl font-semibold">{t.title}</h1>
+      <p className="mb-6 max-w-[620px] text-sm leading-6 text-[#555]">{t.lead}</p>
       <form
         className="space-y-4 rounded border bg-white p-6"
         action={async (formData) => {
@@ -43,19 +44,43 @@ export default async function NewProjectPage() {
       >
         <label className="block">
           <span className="text-sm font-medium">{t.labelTitle}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="title" required maxLength={projectFieldLimits.title} />
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            name="title"
+            required
+            maxLength={projectFieldLimits.title}
+            placeholder={t.placeholderTitle}
+          />
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelGenre}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="genre" maxLength={projectFieldLimits.genre} />
+          <span className="ml-2 text-xs text-[#74746e]">{t.optional}</span>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            name="genre"
+            maxLength={projectFieldLimits.genre}
+            placeholder={t.placeholderGenre}
+          />
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelPremise}</span>
-          <textarea className="mt-1 min-h-32 w-full rounded border px-3 py-2" name="premise" maxLength={projectFieldLimits.premise} />
+          <span className="ml-2 text-xs text-[#74746e]">{t.optional}</span>
+          <textarea
+            className="mt-1 min-h-32 w-full rounded border px-3 py-2"
+            name="premise"
+            maxLength={projectFieldLimits.premise}
+            placeholder={t.placeholderPremise}
+          />
         </label>
         <label className="block">
           <span className="text-sm font-medium">{t.labelTone}</span>
-          <input className="mt-1 w-full rounded border px-3 py-2" name="tone" maxLength={projectFieldLimits.tone} />
+          <span className="ml-2 text-xs text-[#74746e]">{t.optional}</span>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            name="tone"
+            maxLength={projectFieldLimits.tone}
+            placeholder={t.placeholderTone}
+          />
         </label>
         <button className="rounded bg-black px-4 py-2 text-white" type="submit">
           {t.save}

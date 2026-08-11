@@ -28,6 +28,29 @@ export function AiSection({ t }: { t: Dictionary["landing"]["ai"] }) {
       </div>
 
       <div className="mt-14">
+        <LandingSubheading>{t.exampleHeading}</LandingSubheading>
+        <ol className="max-w-2xl space-y-3">
+          {t.example.map((turn, i) => (
+            <li
+              key={i}
+              className={`border border-[#dedbd2] p-4 text-sm leading-7 ${
+                turn.from === "you" ? "bg-white" : "ml-0 bg-[#fbfbf9] sm:ml-8"
+              }`}
+            >
+              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.1em] text-[#46605a]">
+                {turn.from === "you" ? "You" : "AI"}
+              </span>
+              <p className="text-[#3f3f39]">{turn.text}</p>
+              {"tool" in turn && turn.tool ? (
+                <code className="mt-2 inline-block bg-[#eceae3] px-2 py-0.5 text-xs text-[#5d5d57]">{turn.tool}</code>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[#5d5d57]">{t.exampleNote}</p>
+      </div>
+
+      <div className="mt-14">
         <LandingSubheading>{t.mcpHeading}</LandingSubheading>
         <p className="max-w-2xl leading-8 text-[#5d5d57]">{t.mcpLead}</p>
 

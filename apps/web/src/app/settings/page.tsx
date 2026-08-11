@@ -1,14 +1,14 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { CopyButton } from "@/components/copy-button";
 import { isBillingLive } from "@/lib/billing-config";
 import { getDictionary, localeTag } from "@/lib/i18n";
+import { McpConnect } from "@/components/mcp-connect";
 import { PLAN_LIMITS } from "@/server/plan";
 import { requireSessionUser } from "@/server/session";
+import { getMcpConnection } from "@/server/mcp-connection";
 import { listGrants } from "@/server/oauth-store";
 import { disconnectOAuthGrant, revokeApiToken, updateLocale } from "./actions";
 import { createBillingPortalSession, createCheckoutSession } from "./billing-actions";
-import { CreateTokenForm } from "./token-form";
 
 export default async function SettingsPage({
   searchParams,
@@ -27,6 +27,7 @@ export default async function SettingsPage({
     orderBy: { updatedAt: "desc" },
   });
   const grants = await listGrants(user.id);
+  const connection = await getMcpConnection(user.id);
   const plan = subscription && ["ACTIVE", "TRIALING"].includes(subscription.status) ? subscription.plan : "FREE";
   const planLabels = { FREE: t.planFree, PLUS: t.planPlus, PRO: t.planPro };
   const planLabel = planLabels[plan];
@@ -85,6 +86,81 @@ export default async function SettingsPage({
           {billing === "not-configured" && t.billingNotConfigured}
         </div>
       ) : null}
+
+      <section id="mcp" className="mb-8 scroll-mt-6 rounded border border-[#dedbd2] bg-white p-6">
+        <McpConnect
+          locale={user.locale}
+          mcpUrl={mcpUrl}
+          openApiUrl={openApiUrl}
+          initialConnection={connection}
+        />
+      </section>
+
+      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
+        <h2 className="mb-3 text-xl font-semibold">{t.connectedAppsHeading}</h2>
+        <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.connectedAppsIntro}</p>
+        {grants.length === 0 ? (
+          <p className="text-sm text-[#4b4b45]">{t.connectedAppsEmpty}</p>
+        ) : (
+          <ul className="space-y-3">
+            {grants.map((grant) => (
+              <li key={grant.id} className="flex items-start justify-between gap-4 rounded border border-[#ece8dd] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="break-all font-medium text-[#1d1d1b]">{grant.client.clientName || grant.client.clientId}</p>
+                  <p className="mt-1 text-xs text-[#666]">
+                    {t.connectedAppsConnected} {grant.createdAt.toLocaleString(localeTag(user.locale))}
+                  </p>
+                  <p className="mt-1 break-all text-xs text-[#666]">
+                    {t.connectedAppsScope} {grant.scope}
+                  </p>
+                </div>
+                <form action={disconnectOAuthGrant}>
+                  <input type="hidden" name="grantId" value={grant.id} />
+                  <button className="shrink-0 rounded border border-red-600 px-3 py-1 text-xs text-red-600" type="submit">
+                    {t.disconnect}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">{t.issuedTokensHeading}</h2>
+        {tokens.length === 0 ? (
+          <p className="text-sm text-[#4b4b45]">{t.noTokens}</p>
+        ) : (
+          <ul className="space-y-3">
+            {tokens.map((token) => (
+              <li
+                key={token.id}
+                className="flex items-center justify-between rounded border border-[#dedbd2] bg-white p-4"
+              >
+                <div>
+                  <p className="font-medium text-[#1d1d1b]">{token.name}</p>
+                  <p className="mt-1 text-xs text-[#4b4b45]">
+                    {token.tokenPrefix}… ・{t.createdLabel} {formatDate(token.createdAt)}
+                    {token.lastUsedAt ? ` ・${t.lastUsedLabel} ${formatDate(token.lastUsedAt)}` : ""}
+                    {token.revokedAt ? ` ・${t.revokedLabel} (${formatDate(token.revokedAt)})` : ""}
+                  </p>
+                </div>
+                {!token.revokedAt ? (
+                  <form action={revokeApiToken}>
+                    <input type="hidden" name="id" value={token.id} />
+                    <button
+                      className="rounded border border-red-600 px-3 py-2 text-sm text-red-600"
+                      type="submit"
+                    >
+                      {t.revoke}
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
         <h2 className="mb-3 text-xl font-semibold">{t.billingHeading}</h2>
@@ -239,107 +315,6 @@ export default async function SettingsPage({
             {t.languageSave}
           </button>
         </form>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="mb-3 text-xl font-semibold">{t.apiTokenHeading}</h2>
-        <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.apiTokenDesc}</p>
-        <CreateTokenForm locale={user.locale} />
-      </section>
-
-      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
-        <h2 className="mb-3 text-xl font-semibold">{t.connectionHeading}</h2>
-        <p className="mb-3 text-sm leading-6 text-[#4b4b45]">{t.connectionIntro}</p>
-        <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-[#4b4b45]">
-          <li>{t.step1}</li>
-          <li>{t.step2}</li>
-          <li>
-            {t.step3}
-            <span className="mt-1 flex items-center gap-2">
-              <code className="block flex-1 break-all rounded bg-[#f7f7f4] p-2 text-xs">{openApiUrl}</code>
-              <CopyButton value={openApiUrl} />
-            </span>
-          </li>
-          <li>{t.step4}</li>
-          <li>{t.step5}</li>
-        </ol>
-      </section>
-
-      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
-        <h2 className="mb-3 text-xl font-semibold">{t.mcpHeading}</h2>
-        <p className="mb-3 text-sm leading-6 text-[#4b4b45]">{t.mcpIntro}</p>
-        <span className="mb-3 flex items-center gap-2">
-          <code className="block flex-1 break-all rounded bg-[#f7f7f4] p-2 text-xs">{mcpUrl}</code>
-          <CopyButton value={mcpUrl} />
-        </span>
-        <p className="text-sm leading-6 text-[#4b4b45]">{t.mcpAuth}</p>
-        <p className="mt-3 text-sm leading-6 text-[#4b4b45]">{t.mcpOAuth}</p>
-      </section>
-
-      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
-        <h2 className="mb-3 text-xl font-semibold">{t.connectedAppsHeading}</h2>
-        <p className="mb-4 text-sm leading-6 text-[#4b4b45]">{t.connectedAppsIntro}</p>
-        {grants.length === 0 ? (
-          <p className="text-sm text-[#4b4b45]">{t.connectedAppsEmpty}</p>
-        ) : (
-          <ul className="space-y-3">
-            {grants.map((grant) => (
-              <li key={grant.id} className="flex items-start justify-between gap-4 rounded border border-[#ece8dd] px-4 py-3">
-                <div className="min-w-0">
-                  <p className="break-all font-medium text-[#1d1d1b]">{grant.client.clientName || grant.client.clientId}</p>
-                  <p className="mt-1 text-xs text-[#666]">
-                    {t.connectedAppsConnected} {grant.createdAt.toLocaleString(localeTag(user.locale))}
-                  </p>
-                  <p className="mt-1 break-all text-xs text-[#666]">
-                    {t.connectedAppsScope} {grant.scope}
-                  </p>
-                </div>
-                <form action={disconnectOAuthGrant}>
-                  <input type="hidden" name="grantId" value={grant.id} />
-                  <button className="shrink-0 rounded border border-red-600 px-3 py-1 text-xs text-red-600" type="submit">
-                    {t.disconnect}
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">{t.issuedTokensHeading}</h2>
-        {tokens.length === 0 ? (
-          <p className="text-sm text-[#4b4b45]">{t.noTokens}</p>
-        ) : (
-          <ul className="space-y-3">
-            {tokens.map((token) => (
-              <li
-                key={token.id}
-                className="flex items-center justify-between rounded border border-[#dedbd2] bg-white p-4"
-              >
-                <div>
-                  <p className="font-medium text-[#1d1d1b]">{token.name}</p>
-                  <p className="mt-1 text-xs text-[#4b4b45]">
-                    {token.tokenPrefix}… ・{t.createdLabel} {formatDate(token.createdAt)}
-                    {token.lastUsedAt ? ` ・${t.lastUsedLabel} ${formatDate(token.lastUsedAt)}` : ""}
-                    {token.revokedAt ? ` ・${t.revokedLabel} (${formatDate(token.revokedAt)})` : ""}
-                  </p>
-                </div>
-                {!token.revokedAt ? (
-                  <form action={revokeApiToken}>
-                    <input type="hidden" name="id" value={token.id} />
-                    <button
-                      className="rounded border border-red-600 px-3 py-2 text-sm text-red-600"
-                      type="submit"
-                    >
-                      {t.revoke}
-                    </button>
-                  </form>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
     </main>
   );

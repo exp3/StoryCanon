@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "jp.softglow/storycanon",
+  "title": "StoryCanon",
+  "description": "A structured story bible for long-form fiction. Read and write scenes, chapters, characters, world notes, plot threads, foreshadowing, mysteries, revision TODOs, a timeline and story-state snapshots, so the work survives the end of the conversation.",
+  "version": "1.0.0",
+  "websiteUrl": "https://storycanon.softglow.jp",
+  "repository": {
+    "url": "https://github.com/exp3/StoryCanon",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://storycanon.softglow.jp/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer token. Only needed for clients that cannot do OAuth — the server advertises OAuth 2.1 with dynamic client registration, so connector-style clients obtain their own token from the URL alone. Hand-issued tokens come from the Settings page.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

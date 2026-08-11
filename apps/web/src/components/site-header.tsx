@@ -14,8 +14,8 @@ const LANDING_ANCHORS = [
   { href: "/#framework", key: "framework" },
   { href: "/#ai", key: "ai" },
   { href: "/#solo", key: "solo" },
-  { href: "/#flow", key: "flow" },
   { href: "/#pricing", key: "pricing" },
+  { href: "/#faq", key: "faq" },
   { href: "/#policy", key: "policy" },
 ] as const;
 
