@@ -21,10 +21,11 @@ describe("landing dictionary parity", () => {
     ["framework.lifecycles", en.landing.framework.lifecycles, ja.landing.framework.lifecycles],
     ["framework.fixedFields", en.landing.framework.fixedFields, ja.landing.framework.fixedFields],
     ["ai.points", en.landing.ai.points, ja.landing.ai.points],
+    ["ai.example", en.landing.ai.example, ja.landing.ai.example],
     ["ai.clients", en.landing.ai.clients, ja.landing.ai.clients],
     ["ai.trademarks", en.landing.ai.trademarks, ja.landing.ai.trademarks],
     ["solo.points", en.landing.solo.points, ja.landing.solo.points],
-    ["flow.steps", en.landing.flow.steps, ja.landing.flow.steps],
+    ["faq.items", en.landing.faq.items, ja.landing.faq.items],
     ["policy.points", en.landing.policy.points, ja.landing.policy.points],
   ];
 
@@ -54,6 +55,28 @@ describe("landing dictionary parity", () => {
   });
 });
 
+/**
+ * The connection panel indexes into these arrays by position
+ * (components/mcp-connect.tsx renders claudeSteps[0..2], chatgptSteps[0..4],
+ * otherSteps[0..2]), so a locale one entry short renders a blank step in the
+ * middle of the instructions people are following.
+ */
+describe("connection step parity", () => {
+  const stepArrays: [string, number][] = [
+    ["claudeSteps", 3],
+    ["chatgptOauthSteps", 6],
+    ["chatgptSteps", 8],
+    ["otherSteps", 3],
+  ];
+
+  it.each(stepArrays)("%s has exactly %i steps in both locales", (name, expected) => {
+    for (const locale of locales) {
+      const connect = getDictionary(locale).settings.connect as unknown as Record<string, string[]>;
+      expect(connect[name]).toHaveLength(expected);
+    }
+  });
+});
+
 describe("landing copy is filled in", () => {
   it.each(locales)("has no empty landing strings for %s", (locale) => {
     const empty: string[] = [];
@@ -67,6 +90,26 @@ describe("landing copy is filled in", () => {
       }
     };
     walk(getDictionary(locale).landing, "landing");
+    expect(empty).toEqual([]);
+  });
+
+  // Same guarantee for the screens the funnel now depends on. Scoped rather
+  // than applied to the whole dictionary so it stays a statement about these.
+  it.each(locales)("has no empty onboarding strings for %s", (locale) => {
+    const empty: string[] = [];
+    const walk = (value: unknown, path: string) => {
+      if (typeof value === "string") {
+        if (value.trim() === "") empty.push(path);
+      } else if (Array.isArray(value)) {
+        value.forEach((item, i) => walk(item, `${path}[${i}]`));
+      } else if (value && typeof value === "object") {
+        for (const [key, child] of Object.entries(value)) walk(child, `${path}.${key}`);
+      }
+    };
+    const dict = getDictionary(locale);
+    walk(dict.onboarding, "onboarding");
+    walk(dict.dashboard, "dashboard");
+    walk(dict.settings.connect, "settings.connect");
     expect(empty).toEqual([]);
   });
 });

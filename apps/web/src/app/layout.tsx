@@ -13,7 +13,9 @@ export const metadata: Metadata = {
   // Required for openGraph and opengraph-image to emit absolute URLs.
   metadataBase: new URL(legalInfo.serviceUrl),
   title: { default: "StoryCanon", template: "%s | StoryCanon" },
-  description: "Private story memory for ChatGPT-powered writing.",
+  // Pages with their own generateMetadata override this; it is what /login and
+  // the legal pages carry, so it must not name a single AI client.
+  description: "A structured story bible your AI can read and write over MCP — and that works just as well without one.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -35,7 +35,10 @@ function assertLimit(current: number, limit: Limit, message: string) {
 
 export async function assertCanCreateProject(userId: string) {
   const plan = await getPlan(userId);
-  const current = await prisma.project.count({ where: { userId, deletedAt: null } });
+  // isSample is excluded on purpose: the demo work exists to show a Free user
+  // what a filled-in project looks like, and charging them a quota slot for
+  // looking would defeat the point.
+  const current = await prisma.project.count({ where: { userId, deletedAt: null, isSample: false } });
   assertLimit(current, PLAN_LIMITS[plan].projects, "Plus plan is required to create more projects.");
 }
 

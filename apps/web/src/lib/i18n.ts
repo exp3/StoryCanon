@@ -26,7 +26,25 @@ const en = {
   admin: {
     title: "Admin Console",
     description: "Grant or revoke paid plans manually, without Stripe checkout.",
-    userCountHeading: "Registered users",
+    funnelHeading: "Activation funnel",
+    funnelNote:
+      "Counted straight from the database, so unlike the PostHog numbers these are not gated behind cookie consent.",
+    funnelStage: "Stage",
+    funnelUsers: "Users",
+    funnelOfTotal: "% of all",
+    funnelOfPrev: "% of previous",
+    stageSignedUp: "Signed up",
+    stageOnboarded: "Finished onboarding",
+    stageHasProject: "Created a work",
+    stageHasScene: "Saved a scene",
+    mcpHeading: "MCP connection",
+    mcpNote:
+      "Not a strict funnel: a connector-style client obtains OAuth access without the user ever issuing a token. The gap between issued and used tokens is the interesting number.",
+    mcpTokenIssued: "Issued an API token",
+    mcpTokenUsed: "…and the token has been used at least once",
+    mcpTokenUnused: "…issued but never used",
+    mcpOAuthGranted: "Approved an OAuth connector",
+    mcpAnyActive: "Reached StoryCanon over MCP (either route)",
     grantHeading: "Grant a plan",
     emailLabel: "User email",
     planLabel: "Plan",
@@ -57,6 +75,23 @@ const en = {
     recentProjects: "Recently Updated Projects",
     viewAllProjects: "View All Projects",
     emptyProjects: "No projects yet. Create your first project.",
+    startHeading: "Three ways to start",
+    startLead:
+      "StoryCanon is a place your work goes, so an empty account has nothing to show you yet. Pick whichever of these fits.",
+    startConnectTitle: "Connect an AI",
+    startConnectBody:
+      "Point Claude, Codex or another MCP client at StoryCanon and ask it to start a work. It creates the project, the cast and the scenes for you — you never fill in a blank form.",
+    startConnectCta: "Set up the connection",
+    startConnectBadge: "Recommended",
+    startSampleTitle: "Load the sample work",
+    startSampleBody:
+      "A short mystery with its scenes, cast, world notes, foreshadowing and story state already filled in, so you can see what a project looks like before writing one. Edit or delete it freely — it does not count against your plan.",
+    startSampleCta: "Add the sample",
+    startBlankTitle: "Start a work yourself",
+    startBlankBody: "A title is all that is required. Everything else can be filled in as you go, in the browser.",
+    startBlankCta: "New project",
+    mcpBannerText: "Not connected to an AI yet. One URL and a sign-in is all it takes.",
+    mcpBannerCta: "Connect",
   },
   projectsList: {
     title: "Projects",
@@ -68,10 +103,17 @@ const en = {
   },
   projectNew: {
     title: "New Project",
+    lead: "Only the title is required. Everything else can be filled in later, or left to the AI you connect.",
     labelTitle: "Title",
     labelGenre: "Genre",
     labelPremise: "Premise",
     labelTone: "Tone",
+    optional: "Optional",
+    placeholderTitle: "The Observer of Nagi",
+    placeholderGenre: "Quiet fantasy mystery",
+    placeholderPremise:
+      "A seaside town keeps a century of weather records. Coming home to look for her missing sister, Akari finds handwriting in the logbook margin that can only be hers.",
+    placeholderTone: "Still and humid. Follows the gap between record and memory, not a chase.",
     save: "Save",
   },
   projectDetail: {
@@ -342,28 +384,76 @@ const en = {
   },
   settings: {
     title: "Settings",
-    apiTokenHeading: "API Tokens (for ChatGPT integration)",
-    apiTokenDesc: "Used as a Bearer token when connecting StoryCanon from a ChatGPT Custom GPT Action.",
+    connect: {
+      heading: "Connect an AI",
+      lead:
+        "StoryCanon runs a Model Context Protocol server, so an AI can read and write your works directly — no pasting settings back in every session. Pick the tool you use.",
+      tabClaude: "Claude",
+      tabClaudeCode: "Claude Code",
+      tabChatgpt: "ChatGPT",
+      tabOther: "Other MCP clients",
+      urlLabel: "StoryCanon MCP endpoint",
+      claudeNote: "Nothing to copy but the URL — Claude signs you in and asks for approval in the browser.",
+      claudeSteps: [
+        "In Claude's settings, open the screen for adding a connector.",
+        "Paste this URL as a custom connector:",
+        "Claude will send you to StoryCanon to sign in and approve the connection. Approve it, and you are done.",
+      ],
+      claudeCodeNote: "Claude Code connects with one command. Issue a token and the finished command appears below it.",
+      claudeCodeTokenStep: "Issue a token for this machine:",
+      claudeCodeCommandStep: "Run this command. It already carries your URL and token:",
+      commandPending: "The command will appear here, with the token filled in, once you issue one above.",
+      chatgptMethodOauth: "Developer mode",
+      chatgptMethodActions: "Custom GPT",
+      chatgptMethodRecommended: "Recommended",
+      chatgptOauthNote:
+        "ChatGPT's developer mode connects to a remote MCP server directly, over OAuth. Nothing to copy but the URL, and it reaches the same tools every other MCP client gets.",
+      chatgptOauthPrereq:
+        "Developer mode is available on Pro, Plus, Business, Enterprise and Education accounts, on the web. On a Business or Enterprise workspace an admin may have to allow it first.",
+      chatgptOauthSteps: [
+        "In ChatGPT, open Settings and turn on \"Developer mode\" under security and login.",
+        "Open the plugins screen and press \"+\" to add a new app.",
+        "Give StoryCanon's MCP endpoint as the server URL:",
+        "Choose OAuth as the authentication method. There is no token to paste — ChatGPT registers itself.",
+        "ChatGPT sends you to StoryCanon to sign in and approve the connection. Approve it, and this panel will say connected.",
+        "In a chat, enable the app for that conversation before asking it to do anything.",
+      ],
+      chatgptNote:
+        "The older route: a Custom GPT that calls StoryCanon's published OpenAPI schema as an Action, with a token. Use this if developer mode is not available to you. Issue the token at the bottom of this panel first — it is shown only once.",
+      chatgptPrereq:
+        "Building a Custom GPT needs a ChatGPT plan that includes the GPT builder (Plus, Team or Enterprise). On the free plan this route is not available.",
+      chatgptSteps: [
+        "In ChatGPT, open \"Create a GPT\" and switch to the \"Configure\" tab.",
+        "Give it a name and description — for example \"StoryCanon\", and \"saves and fetches prose, characters, foreshadowing and story state in StoryCanon\".",
+        "Scroll to the bottom and press \"Create new action\" under \"Actions\".",
+        "In the \"Schema\" box press \"Import from URL\".",
+        "Paste this URL and import it:",
+        "Check that \"Available actions\" now lists the StoryCanon operations — creating a work, fetching state, saving prose and so on.",
+        "Open \"Authentication\", choose \"API Key\" with Auth Type \"Bearer\", paste the token you issued below, and save.",
+        "Press \"Create\" at the top right. Sharing it with just yourself is fine.",
+      ],
+      chatgptMcpNote:
+        "The first time the GPT calls an action, ChatGPT asks whether it may send data to StoryCanon. Approve it, and this panel will say connected. If developer mode is available to you, it is the shorter route and gives you every StoryCanon operation rather than this subset.",
+      otherNote:
+        "Any client that speaks remote MCP works the same way. Clients that support OAuth need only the URL; the rest send a token.",
+      otherSteps: [
+        "Point the client at this endpoint, over HTTP (not stdio):",
+        "If the client supports OAuth, that is all — it will send you here to approve the connection.",
+        "Otherwise issue a token below and have the client send it as an Authorization: Bearer header.",
+      ],
+      tokenHeading: "Issue a token",
+      statusWaiting: "Waiting for a client to connect…",
+      statusWaitingHint: "Leave this page open. It updates by itself as soon as an AI reaches your account.",
+      statusConnected: "Connected.",
+      statusConnectedVia: "Reached your account as:",
+      statusNext: "Ask it to list your works to check it end to end. If you have none yet, ask it to start one.",
+      helpTip:
+        "Tip: once connected, tell the AI to call StoryCanon's `help` tool. It explains the first steps and the write loop in your language.",
+    },
     tokenNameLabel: "Token name",
     tokenNamePlaceholder: "e.g. ChatGPT integration",
     issueButton: "Issue new token",
     revealWarning: "This will never be shown again once you leave this page. Copy it now.",
-    connectionHeading: "Connecting with ChatGPT",
-    connectionIntro:
-      "Connect ChatGPT using a Custom GPT's Actions feature. StoryCanon now also runs an MCP server — see the section below for clients that speak the Model Context Protocol.",
-    step1: "Issue an API token above and copy the value.",
-    step2: "In ChatGPT, open \"Create a GPT\" and go to the \"Configure\" tab.",
-    step3: "Choose \"Actions\" → \"Create new action\" → \"Import from URL\", and paste the URL below.",
-    step4:
-      "Set \"Authentication\" to \"API Key\" with Auth Type \"Bearer\", and paste the token you copied in step 1.",
-    step5: "Save, and the GPT can now create projects, fetch state, save body text, and more.",
-    mcpHeading: "MCP server (for Claude, Codex and other MCP clients)",
-    mcpIntro:
-      "StoryCanon also speaks the Model Context Protocol. Point an MCP client at this endpoint to read and write your works from Claude Code, Codex, or anything else that supports remote MCP servers.",
-    mcpAuth:
-      "Authenticate with an API token from this page, sent as an Authorization: Bearer header. In Claude Code: claude mcp add --transport http storycanon <URL> --header \"Authorization: Bearer <token>\"",
-    mcpOAuth:
-      "Clients that support OAuth — such as connectors in Claude — can connect with the URL alone: they will send you here to sign in and approve the connection, and no token needs to be copied.",
     connectedAppsHeading: "Connected apps",
     connectedAppsEmpty: "No app has been connected yet.",
     connectedAppsIntro: "Apps you approved through the connection screen. Disconnecting revokes their access immediately.",
@@ -441,6 +531,21 @@ const en = {
     title: "Welcome to StoryCanon",
     subtitle: "Choose your language to get started.",
     continueButton: "Continue",
+    stepLabel: "Step",
+    planHeading: "How do you want to write?",
+    planLead:
+      "StoryCanon holds the structure — scenes, cast, world, foreshadowing. You can fill it from an AI or by hand, and either can be changed later.",
+    planWithAiTitle: "With an AI",
+    planWithAiBody:
+      "Connect Claude, Claude Code, ChatGPT or another MCP client. Ask it to start a work and it creates the project, the cast and the scenes for you. This is the shortest way to see StoryCanon with something in it.",
+    planWithAiCta: "Connect one now",
+    planSoloTitle: "By myself, in the browser",
+    planSoloBody:
+      "Every entity has an ordinary form and inline editing. You can connect an AI later from Settings whenever you want to.",
+    planSoloCta: "Go to the dashboard",
+    connectHeading: "Connect your AI",
+    skip: "Skip for now",
+    doneCta: "Go to the dashboard",
   },
   footer: {
     tokushoho: "Legal notice (特定商取引法)",
@@ -470,8 +575,8 @@ const en = {
       framework: "Structure",
       ai: "AI integration",
       solo: "Without AI",
-      flow: "How it works",
       pricing: "Pricing",
+      faq: "FAQ",
       policy: "Development",
     },
     switcher: { ja: "日本語", en: "English" },
@@ -480,7 +585,7 @@ const en = {
       titleLine1: "A place to keep",
       titleLine2: "what you're making.",
       lead:
-        "Scenes, characters, worldbuilding, foreshadowing, plot threads. Everything you decide while building a story, kept in one fixed shape. It connects directly to Claude, ChatGPT and other MCP clients, and works just as well without any AI.",
+        "Scenes, characters, worldbuilding, foreshadowing, plot threads. Everything you decide while building a story, kept in one fixed shape — and connected to Claude, ChatGPT or Claude Code over MCP, so your AI reads and writes it directly instead of being told again every session.",
       primaryCta: "Start for free",
       secondaryCta: "See the structure",
       note: "A StoryCanon account is required. Sign in with Google.",
@@ -503,7 +608,7 @@ const en = {
       ],
     },
     audience: {
-      heading: "Settings get buried where you wrote them.",
+      heading: "Settings get buried.",
       lead:
         "StoryCanon is for the kind of writing where there is simply too much to remember — long-form fiction, a series, a campaign scenario, a world you keep adding to.",
       audienceHeading: "Who it's for",
@@ -584,6 +689,27 @@ const en = {
       heading: "Designed for AI to read and write.",
       lead:
         "StoryCanon does not generate text itself. It is the place your AI writes into — so the story it helps you build is still there tomorrow, and still yours to change your mind about.",
+      exampleHeading: "What that looks like",
+      exampleNote: "Nothing was pasted in. The context came from the work itself, and the result went back into it.",
+      example: [
+        { from: "you", text: "I want to go deeper on Goda, without contradicting anything already decided about him." },
+        { from: "ai", text: "Reading his profile and the notes filed against him.", tool: "get_character" },
+        {
+          from: "ai",
+          text: "He keeps what he knows separate from what he can say, speaks in flat endings, and never uses Akari's name. The one thing not written down is why he stays silent — and it has to square with his cutting the pier lights that night.",
+        },
+        { from: "you", text: "That's the gap. Work it out and write it down." },
+        {
+          from: "ai",
+          text: "Added two character notes: the reason for his silence, and how he keeps his distance from Akari.",
+          tool: "save_character_note",
+        },
+        {
+          from: "ai",
+          text: "His current state is updated too, so the next session starts from this and not from scratch.",
+          tool: "save_character",
+        },
+      ],
       points: [
         {
           title: "Connect your AI once",
@@ -618,7 +744,7 @@ const en = {
         {
           name: "ChatGPT",
           body:
-            "Connect through a Custom GPT's Actions with the published OpenAPI schema and an API token, or over MCP wherever your ChatGPT plan supports remote MCP servers.",
+            "Turn on developer mode and add StoryCanon as a custom app: the URL alone is enough, and OAuth handles the rest. A Custom GPT can also reach it through Actions and the published OpenAPI schema.",
         },
         {
           name: "Ollama",
@@ -664,25 +790,6 @@ const en = {
         },
       ],
     },
-    flow: {
-      heading: "Write, record, and pick up where you left off.",
-      lead: "The loop is the same whether you are doing the writing or a model is.",
-      steps: [
-        {
-          title: "Decide the shape",
-          body: "Create a project and fill in what you already know: premise, tone, the characters you have so far.",
-        },
-        {
-          title: "Write and record",
-          body: "Write directly in StoryCanon, or let ChatGPT write and save straight into the project.",
-        },
-        {
-          title: "Read the state, continue",
-          body:
-            "Unresolved foreshadowing, open TODOs and the latest story state tell you what the next scene has to do.",
-        },
-      ],
-    },
     pricing: {
       heading: "Plans that follow your pace.",
       lead: "Start free. Upgrade when you need more projects, more manuscript, or structured export.",
@@ -699,6 +806,40 @@ const en = {
         PLUS: { label: "Plus", tagline: "For writing regularly" },
         PRO: { label: "Pro", tagline: "For long-form and series" },
       },
+    },
+    faq: {
+      heading: "Questions people ask first.",
+      lead: "If something here is still unclear, the contact form goes straight to the developer.",
+      items: [
+        {
+          q: "What is MCP, and do I need it?",
+          a: "The Model Context Protocol is an open standard that lets an AI client talk to an outside service. StoryCanon runs an MCP server, so Claude, Claude Code, ChatGPT and others can read and write your work directly instead of you pasting settings into a chat. You do not need it — everything is editable in the browser — but it is what makes the AI stop forgetting.",
+        },
+        {
+          q: "Is it usable without any AI?",
+          a: "Yes, and that is a supported way to use it rather than a fallback. Every entity has an ordinary form with inline editing, plus a reader that remembers where you stopped. Using StoryCanon purely to keep a scenario and its worldbuilding straight is a first-class use.",
+        },
+        {
+          q: "How hard is it to connect?",
+          a: "For clients that support OAuth, such as connectors in Claude, you paste one URL and approve the connection in the browser — there is no token to copy. Claude Code takes a single command, and the Settings page prints it with your URL and token already filled in.",
+        },
+        {
+          q: "Does StoryCanon write the prose?",
+          a: "No. StoryCanon does not generate text. It is the place your AI writes into, and it records which side wrote each scene so you can always tell them apart.",
+        },
+        {
+          q: "Can I get my writing back out?",
+          a: "Yes. Markdown and plain text export are on every plan, including Free. JSON export needs a paid plan.",
+        },
+        {
+          q: "What do I get for free?",
+          a: "Three works, eight characters and 20,000 characters of body text per work, plus the world notes, foreshadowing, mysteries, plot threads and revision TODOs that go with them.",
+        },
+        {
+          q: "Is my writing private?",
+          a: "Works are private to your account. An AI reaches them only through a connection you approved yourself, and you can revoke any connected app or token from Settings at any time.",
+        },
+      ],
     },
     policy: {
       heading: "Still being built, on purpose.",
@@ -756,7 +897,25 @@ const ja: typeof en = {
   admin: {
     title: "管理コンソール",
     description: "Stripe決済を介さず、有償プランを手動で付与・剥奪できます。",
-    userCountHeading: "登録ユーザー数",
+    funnelHeading: "アクティベーション・ファネル",
+    funnelNote:
+      "データベースから直接集計しています。PostHog の数値と違い、Cookie 同意の有無に左右されません。",
+    funnelStage: "段階",
+    funnelUsers: "ユーザー数",
+    funnelOfTotal: "全体比",
+    funnelOfPrev: "前段階比",
+    stageSignedUp: "登録した",
+    stageOnboarded: "オンボーディングを完了した",
+    stageHasProject: "作品を作った",
+    stageHasScene: "シーンを保存した",
+    mcpHeading: "MCP 接続",
+    mcpNote:
+      "厳密なファネルではありません。コネクタ型のクライアントは、ユーザーがトークンを発行しなくても OAuth で接続できます。発行済みと実使用の差が見どころです。",
+    mcpTokenIssued: "API トークンを発行した",
+    mcpTokenUsed: "…そのトークンが一度以上使われた",
+    mcpTokenUnused: "…発行したが一度も使われていない",
+    mcpOAuthGranted: "OAuth コネクタを許可した",
+    mcpAnyActive: "MCP 経由で実際に到達した(どちらかの経路)",
     grantHeading: "プランを付与",
     emailLabel: "ユーザーのメールアドレス",
     planLabel: "プラン",
@@ -787,6 +946,23 @@ const ja: typeof en = {
     recentProjects: "最近更新した作品",
     viewAllProjects: "作品一覧へ",
     emptyProjects: "まだ作品がありません。最初の作品を作成してください。",
+    startHeading: "はじめかたは3つあります",
+    startLead:
+      "StoryCanon は書いたものの置き場所なので、空のアカウントにはまだ見せられるものがありません。合うものを選んでください。",
+    startConnectTitle: "AI とつなぐ",
+    startConnectBody:
+      "Claude や Codex などの MCP クライアントから StoryCanon を指定して、作品を作るよう頼むだけです。作品もキャラクターもシーンも AI が作るので、空のフォームを埋める必要がありません。",
+    startConnectCta: "接続を設定する",
+    startConnectBadge: "おすすめ",
+    startSampleTitle: "サンプル作品を入れる",
+    startSampleBody:
+      "シーン・キャラクター・世界観・伏線・物語状態まで埋まった短編ミステリです。自分で書きはじめる前に、作品が入った状態を見られます。編集も削除も自由で、プランの作品数には数えません。",
+    startSampleCta: "サンプルを追加",
+    startBlankTitle: "自分で作品を作る",
+    startBlankBody: "必須はタイトルだけです。あとはブラウザで、書きながら埋めていけます。",
+    startBlankCta: "新規作品",
+    mcpBannerText: "まだ AI と接続していません。URL とログインだけで繋がります。",
+    mcpBannerCta: "接続する",
   },
   projectsList: {
     title: "作品一覧",
@@ -798,10 +974,17 @@ const ja: typeof en = {
   },
   projectNew: {
     title: "新規作品",
+    lead: "必須はタイトルだけです。ほかは後から埋めても、接続した AI に任せてもかまいません。",
     labelTitle: "タイトル",
     labelGenre: "ジャンル",
     labelPremise: "作品の前提",
     labelTone: "トーン",
+    optional: "任意",
+    placeholderTitle: "凪の街の観測者",
+    placeholderGenre: "幻想ミステリ",
+    placeholderPremise:
+      "海に面した街には百年ぶんの天候記録がある。失踪した姉を探して戻った灯は、記録簿の余白に姉としか思えない筆跡を見つける。",
+    placeholderTone: "静かで、湿度のある文体。派手な事件よりも、記録と記憶のずれを追う。",
     save: "保存",
   },
   projectDetail: {
@@ -1072,27 +1255,78 @@ const ja: typeof en = {
   },
   settings: {
     title: "設定",
-    apiTokenHeading: "APIトークン(ChatGPT連携用)",
-    apiTokenDesc: "ChatGPTのCustom GPT Action から StoryCanon に接続する際に、Bearer トークンとして使用します。",
+    connect: {
+      heading: "AI とつなぐ",
+      lead:
+        "StoryCanon は Model Context Protocol のサーバーを提供しています。AI が作品を直接読み書きできるので、毎回設定を貼り直す必要がありません。お使いのツールを選んでください。",
+      tabClaude: "Claude",
+      tabClaudeCode: "Claude Code",
+      tabChatgpt: "ChatGPT",
+      tabOther: "その他の MCP クライアント",
+      urlLabel: "StoryCanon の MCP エンドポイント",
+      claudeNote: "コピーするのは URL だけです。ログインと許可は Claude がブラウザで案内します。",
+      claudeSteps: [
+        "Claude の設定から、コネクタを追加する画面を開きます。",
+        "カスタムコネクタとして、この URL を貼り付けます:",
+        "Claude が StoryCanon のログインと許可の画面に案内します。許可すれば完了です。",
+      ],
+      claudeCodeNote:
+        "Claude Code はコマンド1行で接続できます。トークンを発行すると、そのまま実行できる完成形のコマンドが下に出ます。",
+      claudeCodeTokenStep: "この端末用のトークンを発行します:",
+      claudeCodeCommandStep: "このコマンドを実行します。URL とトークンは埋め込み済みです:",
+      commandPending: "上でトークンを発行すると、トークンを埋め込んだコマンドがここに表示されます。",
+      chatgptMethodOauth: "開発者モード",
+      chatgptMethodActions: "カスタム GPT",
+      chatgptMethodRecommended: "おすすめ",
+      chatgptOauthNote:
+        "ChatGPT の開発者モードは、リモート MCP サーバーに OAuth で直接つながります。コピーするのは URL だけで、他の MCP クライアントと同じツールがそのまま使えます。",
+      chatgptOauthPrereq:
+        "開発者モードは、ウェブ版の Pro / Plus / Business / Enterprise / Education で利用できます。Business・Enterprise のワークスペースでは、管理者による許可が必要な場合があります。",
+      chatgptOauthSteps: [
+        "ChatGPT の「設定」を開き、セキュリティとログインの項目にある「開発者モード」を有効にします。",
+        "プラグインの画面を開き、「＋」から新しいアプリを追加します。",
+        "MCP サーバーの URL として、StoryCanon のエンドポイントを指定します:",
+        "認証方法として OAuth を選びます。トークンを貼り付ける必要はありません。ChatGPT 側が自動で登録します。",
+        "StoryCanon のログインと許可の画面に案内されます。許可すると、この画面が接続済みに変わります。",
+        "チャットで使うときは、その会話でアプリを有効にしてから頼んでください。",
+      ],
+      chatgptNote:
+        "以前からある方法です。カスタム GPT の「アクション」に StoryCanon の OpenAPI スキーマを読み込ませ、トークンで呼び出します。開発者モードが使えない場合はこちらを使ってください。先にこのパネルの一番下でトークンを発行してください。一度しか表示されません。",
+      chatgptPrereq:
+        "カスタム GPT の作成には、GPT ビルダーが使える ChatGPT の有料プラン(Plus / Team / Enterprise)が必要です。無料プランではこの方法は利用できません。",
+      chatgptSteps: [
+        "ChatGPT で「GPT を作成する(Create a GPT)」を開き、「構成(Configure)」タブに切り替えます。",
+        "名前と説明を入力します。例:「StoryCanon 連携」「本文・キャラクター・伏線・物語状態を StoryCanon に保存・取得する」。",
+        "下までスクロールし、「アクション」欄の「新しいアクションを作成する」を押します。",
+        "「スキーマ」欄の「URL からインポートする」を押します。",
+        "この URL を貼り付けて、インポートします:",
+        "「利用可能なアクション」に StoryCanon の操作(作品の作成、状態の取得、本文の保存など)が並べば成功です。",
+        "「認証」を開き、「API キー」を選んで Auth Type を「Bearer」にし、下で発行したトークンを貼り付けて保存します。",
+        "右上の「作成する」を押して保存します。公開範囲は「自分だけ」で構いません。",
+      ],
+      chatgptMcpNote:
+        "GPT が最初にアクションを呼ぶとき、ChatGPT が StoryCanon へ送信してよいかを確認します。許可すると、この画面が接続済みに変わります。開発者モードが使えるなら、そちらのほうが手順は短く、StoryCanon のすべての操作をそのまま利用できます。",
+      otherNote:
+        "リモート MCP に対応したクライアントなら、どれも同じ手順です。OAuth に対応していれば URL だけ、そうでなければトークンを送ります。",
+      otherSteps: [
+        "クライアントに、このエンドポイントを HTTP で指定します(stdio ではありません):",
+        "OAuth に対応していれば、これだけです。この画面に案内されるので許可してください。",
+        "対応していない場合は、下でトークンを発行し、Authorization: Bearer ヘッダーで送るよう設定します。",
+      ],
+      tokenHeading: "トークンを発行する",
+      statusWaiting: "クライアントからの接続を待っています…",
+      statusWaitingHint: "このページは開いたままで大丈夫です。AI が到達すると自動で切り替わります。",
+      statusConnected: "つながりました。",
+      statusConnectedVia: "接続元:",
+      statusNext:
+        "作品の一覧を出すよう頼むと、通しで確認できます。まだ作品がなければ、作るよう頼んでみてください。",
+      helpTip:
+        "ヒント: つながったら、StoryCanon の `help` ツールを呼ぶよう AI に伝えてください。最初の手順と書くときの流れを、日本語で説明します。",
+    },
     tokenNameLabel: "トークン名",
     tokenNamePlaceholder: "例: ChatGPT連携",
     issueButton: "新しいトークンを発行",
     revealWarning: "この画面を離れると二度と表示されません。今すぐコピーしてください。",
-    connectionHeading: "ChatGPTとの接続方法",
-    connectionIntro:
-      "ChatGPT とは Custom GPT の Actions 機能で接続します。StoryCanon は MCP サーバーも提供するようになったため、Model Context Protocol に対応したクライアントは下のセクションを参照してください。",
-    step1: "上のフォームでAPIトークンを発行し、値をコピーする。",
-    step2: "ChatGPTで「GPTを作成する(Create a GPT)」を開き、「Configure」タブに移動する。",
-    step3: "「Actions」→「Create new action」→「Import from URL」を選び、次のURLを貼り付ける。",
-    step4: "「Authentication」を「API Key」に設定し、Auth Typeを「Bearer」にして、手順1でコピーしたトークンを貼り付ける。",
-    step5: "保存すれば、そのGPTから作品の作成・状態取得・本文保存などが行えるようになる。",
-    mcpHeading: "MCPサーバー(Claude・Codex など向け)",
-    mcpIntro:
-      "StoryCanon は Model Context Protocol にも対応しています。MCP クライアントから下記のエンドポイントを指定すると、Claude Code や Codex など、リモート MCP サーバーに対応したツールから作品を読み書きできます。",
-    mcpAuth:
-      "認証はこのページで発行した API トークンを Authorization: Bearer ヘッダーで送ります。Claude Code の場合: claude mcp add --transport http storycanon <URL> --header \"Authorization: Bearer <トークン>\"",
-    mcpOAuth:
-      "OAuth に対応したクライアント(Claude のコネクタなど)は、URL を入れるだけで接続できます。その場合はこの画面に飛んでログインと許可を行うため、トークンをコピーする必要はありません。",
     connectedAppsHeading: "連携中のアプリ",
     connectedAppsEmpty: "まだ連携しているアプリはありません。",
     connectedAppsIntro: "接続画面で許可したアプリの一覧です。解除するとアクセス権はすぐ失効します。",
@@ -1168,6 +1402,21 @@ const ja: typeof en = {
     title: "StoryCanonへようこそ",
     subtitle: "はじめに使用する言語を選択してください。",
     continueButton: "続ける",
+    stepLabel: "ステップ",
+    planHeading: "どのように書きますか?",
+    planLead:
+      "StoryCanon は構造を持ちます。シーン、キャラクター、世界観、伏線。中身は AI に入れてもらっても、自分で書いてもかまいません。あとから変えられます。",
+    planWithAiTitle: "AI と一緒に書く",
+    planWithAiBody:
+      "Claude、Claude Code、ChatGPT などの MCP クライアントとつなぎます。作品を作るよう頼めば、作品もキャラクターもシーンも AI が作ります。中身の入った StoryCanon を最短で見られる方法です。",
+    planWithAiCta: "いま接続する",
+    planSoloTitle: "自分で、ブラウザで書く",
+    planSoloBody:
+      "どの項目にも普通のフォームとインライン編集があります。AI との接続は、あとから設定画面でいつでもできます。",
+    planSoloCta: "ダッシュボードへ",
+    connectHeading: "AI とつなぐ",
+    skip: "あとで設定する",
+    doneCta: "ダッシュボードへ",
   },
   footer: {
     tokushoho: "特定商取引法に基づく表記",
@@ -1197,8 +1446,8 @@ const ja: typeof en = {
       framework: "構造",
       ai: "AI連携",
       solo: "AIなしでも",
-      flow: "使い方",
       pricing: "料金プラン",
+      faq: "よくある質問",
       policy: "開発方針",
     },
     switcher: { ja: "日本語", en: "English" },
@@ -1207,7 +1456,7 @@ const ja: typeof en = {
       titleLine1: "つくるものを、",
       titleLine2: "置いておく場所。",
       lead:
-        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。ClaudeやChatGPTなどMCP対応のツールと直接つなげられますが、AIを使わずに使っても過不足なく機能します。",
+        "シーン、登場人物、世界観、伏線、プロット。物語をつくるときに決めたことを、決まった形で置いておける場所です。Claude や ChatGPT、Claude Code とは MCP で直接つながるので、毎回説明し直さなくても、AI がそのまま読み書きします。",
       primaryCta: "無料ではじめる",
       secondaryCta: "構造を見る",
       note: "ご利用にはStoryCanonアカウントが必要です。Googleアカウントでログインします。",
@@ -1230,7 +1479,7 @@ const ja: typeof en = {
       ],
     },
     audience: {
-      heading: "設定は、書いた場所に埋もれていきます。",
+      heading: "設定は埋もれていきます",
       lead:
         "StoryCanonは、長編やシリーズ、TRPGのシナリオのように、覚えておくことが多すぎる創作のための道具です。",
       audienceHeading: "こんな人のための道具です",
@@ -1308,6 +1557,27 @@ const ja: typeof en = {
     },
     ai: {
       heading: "AIが読み書きすることを前提に設計。",
+      exampleHeading: "たとえば、こうなります",
+      exampleNote: "貼り付けたものは何もありません。文脈は作品から読み、結果は作品に戻ります。",
+      example: [
+        { from: "you", text: "郷田をもう少し掘り下げたい。これまで決めた設定と矛盾しない範囲で。" },
+        { from: "ai", text: "郷田のプロフィールと、紐づいているノートを読みます。", tool: "get_character" },
+        {
+          from: "ai",
+          text: "「知っていることと言えることを分けている」人物で、口調は言い切り、灯を名前で呼ばない。書かれていないのは沈黙の理由です。失踪した夜に桟橋の灯りを落としたことと、辻褄が合う必要があります。",
+        },
+        { from: "you", text: "そこが空いてる。詰めて、書き残して。" },
+        {
+          from: "ai",
+          text: "キャラクターノートを2件追加しました。沈黙の理由と、灯に対する距離の取りかた。",
+          tool: "save_character_note",
+        },
+        {
+          from: "ai",
+          text: "現在の状態も更新したので、次に開いたときはここから始まります。ゼロからではありません。",
+          tool: "save_character",
+        },
+      ],
       lead:
         "StoryCanon自身は文章を生成しません。AIが書き込む先として設計されています。だから、AIと一緒につくった物語が明日も残っていて、あとから考え直すこともできます。",
       points: [
@@ -1344,7 +1614,7 @@ const ja: typeof en = {
         {
           name: "ChatGPT",
           body:
-            "Custom GPTのActions機能から、公開しているOpenAPIスキーマとAPIトークンで接続できます。リモートMCPサーバーに対応したプランであれば、MCP経由でも接続できます。",
+            "開発者モードを有効にして、カスタムアプリとして追加します。URLだけで接続でき、認証はOAuthが行います。カスタムGPTのActions機能から、公開しているOpenAPIスキーマ経由で接続することもできます。",
         },
         {
           name: "Ollama",
@@ -1389,24 +1659,6 @@ const ja: typeof en = {
         },
       ],
     },
-    flow: {
-      heading: "書いて、記録して、続きへ戻る。",
-      lead: "書くのが自分でもモデルでも、繰り返す流れは同じです。",
-      steps: [
-        {
-          title: "構造を決める",
-          body: "作品を作り、いま分かっていることを埋めます。あらすじ、トーン、すでにいる登場人物。",
-        },
-        {
-          title: "書いて記録する",
-          body: "StoryCanonで直接書くか、ChatGPTに書かせてそのまま作品へ保存します。",
-        },
-        {
-          title: "状態を見て、続きを書く",
-          body: "未回収の伏線、残っているTODO、最新の物語状態が、次のシーンで何をすべきかを教えてくれます。",
-        },
-      ],
-    },
     pricing: {
       heading: "創作のペースに合わせたプラン。",
       lead: "まずは無料で。作品数・本文量・構造化された書き出しが必要になったらアップグレードできます。",
@@ -1423,6 +1675,40 @@ const ja: typeof en = {
         PLUS: { label: "Plus", tagline: "継続して書く方へ" },
         PRO: { label: "Pro", tagline: "長編・シリーズ制作に" },
       },
+    },
+    faq: {
+      heading: "よく聞かれること。",
+      lead: "ここで解決しないことは、お問い合わせフォームから開発者本人に直接届きます。",
+      items: [
+        {
+          q: "MCP とは何ですか。必要ですか。",
+          a: "Model Context Protocol は、AI クライアントが外部のサービスとやり取りするためのオープンな規格です。StoryCanon は MCP サーバーを提供しているので、Claude、Claude Code、ChatGPT などから作品を直接読み書きできます。会話に設定を貼り直す必要がなくなります。必須ではありません。ブラウザだけでも全部編集できます。ただ、AI に忘れさせないための仕組みがこれです。",
+        },
+        {
+          q: "AI を使わなくても使えますか。",
+          a: "使えます。代替手段ではなく、想定された使い方のひとつです。どの項目にも普通のフォームとインライン編集があり、読書位置を覚えるリーダーもあります。シナリオと世界観の整理のためだけに使うのも、正しい使い方です。",
+        },
+        {
+          q: "接続はどのくらい面倒ですか。",
+          a: "Claude のコネクタなど OAuth に対応したクライアントなら、URL を1つ貼ってブラウザで許可するだけです。トークンをコピーする必要はありません。Claude Code はコマンド1行で、設定画面が URL とトークンを埋め込んだ完成形を表示します。",
+        },
+        {
+          q: "StoryCanon が文章を書くのですか。",
+          a: "書きません。StoryCanon 自身は文章を生成しません。AI が書き込む先です。どちらが書いたシーンかは必ず記録されるので、後から見分けられます。",
+        },
+        {
+          q: "書いたものは持ち出せますか。",
+          a: "持ち出せます。Markdown とプレーンテキストの書き出しは無料プランを含む全プランで使えます。JSON は有料プランです。",
+        },
+        {
+          q: "無料でどこまで使えますか。",
+          a: "作品3つ、1作品あたりキャラクター8人と本文20,000字、それに世界観ノート・伏線・謎・プロット・改稿TODOが付きます。",
+        },
+        {
+          q: "書いたものは非公開ですか。",
+          a: "作品はアカウントに紐づく非公開データです。AI が読めるのは、ご自身が許可した接続を通してのみです。連携中のアプリやトークンは、設定画面からいつでも解除できます。",
+        },
+      ],
     },
     policy: {
       heading: "つくり続けています。",

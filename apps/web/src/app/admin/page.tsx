@@ -15,7 +15,49 @@ export default async function AdminPage({
   const t = getDictionary(user.locale).admin;
   const { error, email, granted } = await searchParams;
 
-  const userCount = await prisma.user.count();
+  // Counted from the database rather than PostHog: analytics only loads after
+  // the cookie banner is accepted, so it systematically undercounts exactly the
+  // early-funnel users we are trying to see.
+  const [userCount, onboardedCount, withProjectCount, withSceneCount, tokenIssuedCount, tokenUsedCount, oauthGrantedCount, mcpActiveCount] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { onboardingCompletedAt: { not: null } } }),
+      prisma.user.count({ where: { projects: { some: { deletedAt: null } } } }),
+      prisma.user.count({
+        where: { projects: { some: { deletedAt: null, scenes: { some: { deletedAt: null } } } } },
+      }),
+      prisma.user.count({ where: { apiTokens: { some: { deletedAt: null } } } }),
+      prisma.user.count({ where: { apiTokens: { some: { deletedAt: null, lastUsedAt: { not: null } } } } }),
+      prisma.user.count({ where: { oauthGrants: { some: {} } } }),
+      prisma.user.count({
+        where: {
+          OR: [
+            { apiTokens: { some: { deletedAt: null, lastUsedAt: { not: null } } } },
+            { oauthGrants: { some: {} } },
+          ],
+        },
+      }),
+    ]);
+
+  const funnel = [
+    { label: t.stageSignedUp, value: userCount },
+    { label: t.stageOnboarded, value: onboardedCount },
+    { label: t.stageHasProject, value: withProjectCount },
+    { label: t.stageHasScene, value: withSceneCount },
+  ];
+
+  const mcpRows = [
+    { label: t.mcpTokenIssued, value: tokenIssuedCount },
+    { label: t.mcpTokenUsed, value: tokenUsedCount, indent: true },
+    { label: t.mcpTokenUnused, value: tokenIssuedCount - tokenUsedCount, indent: true },
+    { label: t.mcpOAuthGranted, value: oauthGrantedCount },
+    { label: t.mcpAnyActive, value: mcpActiveCount, emphasis: true },
+  ];
+
+  function percent(value: number, of: number) {
+    if (of === 0) return "—";
+    return `${Math.round((value / of) * 100)}%`;
+  }
 
   const subscriptions = await prisma.subscription.findMany({
     where: {
@@ -54,8 +96,61 @@ export default async function AdminPage({
       ) : null}
 
       <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
-        <p className="text-sm text-[#666]">{t.userCountHeading}</p>
-        <p className="mt-4 text-3xl font-semibold">{userCount.toLocaleString(localeTag(user.locale))}</p>
+        <h2 className="mb-1 text-xl font-semibold">{t.funnelHeading}</h2>
+        <p className="mb-4 text-sm leading-6 text-[#666]">{t.funnelNote}</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#dedbd2] text-left text-[#4b4b45]">
+                <th className="py-2 pr-4 font-medium">{t.funnelStage}</th>
+                <th className="px-4 py-2 text-right font-medium">{t.funnelUsers}</th>
+                <th className="px-4 py-2 text-right font-medium">{t.funnelOfTotal}</th>
+                <th className="py-2 pl-4 text-right font-medium">{t.funnelOfPrev}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {funnel.map((stage, i) => (
+                <tr key={stage.label} className="border-b border-[#ece8dd] last:border-0">
+                  <td className="py-2 pr-4">{stage.label}</td>
+                  <td className="px-4 py-2 text-right font-medium">
+                    {stage.value.toLocaleString(localeTag(user.locale))}
+                  </td>
+                  <td className="px-4 py-2 text-right text-[#666]">{percent(stage.value, userCount)}</td>
+                  <td className="py-2 pl-4 text-right text-[#666]">
+                    {i === 0 ? "—" : percent(stage.value, funnel[i - 1].value)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">
+        <h2 className="mb-1 text-xl font-semibold">{t.mcpHeading}</h2>
+        <p className="mb-4 text-sm leading-6 text-[#666]">{t.mcpNote}</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#dedbd2] text-left text-[#4b4b45]">
+                <th className="py-2 pr-4 font-medium">{t.funnelStage}</th>
+                <th className="px-4 py-2 text-right font-medium">{t.funnelUsers}</th>
+                <th className="py-2 pl-4 text-right font-medium">{t.funnelOfTotal}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mcpRows.map((row) => (
+                <tr key={row.label} className="border-b border-[#ece8dd] last:border-0">
+                  <td className={`py-2 pr-4 ${row.indent ? "pl-4 text-[#666]" : ""}`}>{row.label}</td>
+                  <td className={`px-4 py-2 text-right ${row.emphasis ? "font-semibold" : "font-medium"}`}>
+                    {row.value.toLocaleString(localeTag(user.locale))}
+                  </td>
+                  <td className="py-2 pl-4 text-right text-[#666]">{percent(row.value, userCount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="mb-8 rounded border border-[#dedbd2] bg-white p-6">

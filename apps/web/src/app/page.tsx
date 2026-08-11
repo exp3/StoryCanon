@@ -3,13 +3,15 @@ import { redirect } from "next/navigation";
 import { AiSection } from "@/components/landing/ai-section";
 import { AudienceSection } from "@/components/landing/audience-section";
 import { CtaSection } from "@/components/landing/cta-section";
-import { FlowSection } from "@/components/landing/flow-section";
+import { FaqSection } from "@/components/landing/faq-section";
 import { FrameworkSection } from "@/components/landing/framework-section";
 import { Hero } from "@/components/landing/hero";
 import { PolicySection } from "@/components/landing/policy-section";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { SoloSection } from "@/components/landing/solo-section";
 import { getDictionary, localeTag, type Locale } from "@/lib/i18n";
+import { legalInfo } from "@/lib/legal-info";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
 import { resolveLocale } from "@/server/locale";
 import { getSessionUser } from "@/server/session";
 
@@ -57,15 +59,58 @@ export default async function HomePage() {
 
   return (
     <main className="bg-[#f7f7f4] text-[#1d1d1b]">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(locale)) }} />
       <Hero t={t} />
       <AudienceSection t={t.audience} />
       <FrameworkSection t={t.framework} />
       <AiSection t={t.ai} />
       <SoloSection t={t.solo} />
-      <FlowSection t={t.flow} />
       <PricingSection t={t.pricing} settings={dictionary.settings} locale={locale} />
+      <FaqSection t={t.faq} />
       <PolicySection t={t.policy} />
       <CtaSection t={t.cta} />
     </main>
   );
+}
+
+/**
+ * SoftwareApplication + FAQPage, emitted as one @graph.
+ *
+ * The FAQ entries are read from the same dictionary the section renders, so the
+ * markup cannot drift from the visible answers — which is the thing search
+ * engines penalise.
+ */
+function structuredData(locale: Locale) {
+  const t = getDictionary(locale).landing;
+  const url = `${legalInfo.serviceUrl}${canonicalFor(locale)}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        name: "StoryCanon",
+        url,
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        inLanguage: localeTag(locale),
+        description: t.meta.description,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+          description: `Free plan: ${PLAN_LIMITS.FREE.projects} works`,
+        },
+      },
+      {
+        "@type": "FAQPage",
+        inLanguage: localeTag(locale),
+        mainEntity: t.faq.items.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: { "@type": "Answer", text: item.a },
+        })),
+      },
+    ],
+  };
 }

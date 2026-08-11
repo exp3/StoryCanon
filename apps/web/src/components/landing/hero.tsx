@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n";
+import { TrackedLink } from "@/components/tracked-link";
 import { AppMock } from "./app-mock";
 
 export function Hero({ t }: { t: Dictionary["landing"] }) {
@@ -14,12 +14,14 @@ export function Hero({ t }: { t: Dictionary["landing"] }) {
         </h1>
         <p className="mt-6 max-w-[620px] text-lg leading-9 text-[#5d5d57]">{t.hero.lead}</p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link
+          <TrackedLink
             className="inline-flex min-h-[46px] items-center justify-center rounded border border-[#1d1d1b] bg-[#1d1d1b] px-5 text-sm font-bold text-white"
             href="/login"
+            event="cta_click"
+            location="hero"
           >
             {t.hero.primaryCta}
-          </Link>
+          </TrackedLink>
           <a
             className="inline-flex min-h-[46px] items-center justify-center rounded border border-[#1d1d1b] px-5 text-sm font-bold"
             href="#framework"

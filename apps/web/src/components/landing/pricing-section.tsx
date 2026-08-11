@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TrackedLink } from "@/components/tracked-link";
 import { isBillingLive } from "@/lib/billing-config";
 import { localeTag, type Dictionary, type Locale } from "@/lib/i18n";
 import { legalInfo } from "@/lib/legal-info";
@@ -117,14 +117,16 @@ export function PricingSection({
                 </div>
               </dl>
 
-              <Link
+              <TrackedLink
                 className={`mt-auto inline-flex min-h-[46px] items-center justify-center rounded border border-[#1d1d1b] px-5 text-sm font-bold ${
                   featured ? "bg-[#1d1d1b] text-white" : ""
                 }`}
                 href="/login"
+                event="cta_click"
+                location={`pricing:${plan.toLowerCase()}`}
               >
                 {plan === "FREE" ? t.freeCta : t.paidCta}
-              </Link>
+              </TrackedLink>
             </article>
           );
         })}
