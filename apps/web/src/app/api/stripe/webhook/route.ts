@@ -66,7 +66,14 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    // The async form on purpose, and with no explicit CryptoProvider: stripe's
+    // package exports resolve to the Node build on Node and the Web build under
+    // `workerd`, and each supplies its own default provider (node:crypto vs
+    // SubtleCrypto). The synchronous `constructEvent` has no SubtleCrypto path
+    // at all, so it would throw once this runs on Cloudflare Workers. Passing a
+    // provider explicitly would pin us to one runtime; letting the platform
+    // choose keeps this one line correct on both.
+    event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "invalid_signature";
     return NextResponse.json({ error: "invalid_signature", message }, { status: 400 });

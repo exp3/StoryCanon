@@ -463,6 +463,10 @@ else
   RESOLVED_APP_URL="https://${RESOLVED_ENDPOINT}"
 fi
 
+# Unlike scripts/deploy-bluegreen.sh, this path has no migration step, and the
+# container CMD no longer applies migrations either.
+printf 'WARNING: Prisma migrations were NOT applied by this script.\n' >&2
+
 printf '\nDeployment finished.\n'
 printf '  URL:      %s\n' "$RESOLVED_APP_URL"
 printf '  Image:    %s\n' "$IMAGE_URI"

@@ -23,4 +23,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
-CMD ["sh", "-c", "cd apps/web && ../../node_modules/.bin/prisma migrate deploy && cd /app && node apps/web/server.js"]
+# Serving only. Migrations used to run here, which meant they fired on every
+# task start — including the green task of a blue/green deploy, while blue was
+# still serving the old code against the schema being changed. The deploy
+# pipeline now applies them once, as an explicit gated step, using this same
+# image with a command override (see scripts/deploy-bluegreen.sh).
+CMD ["node", "apps/web/server.js"]

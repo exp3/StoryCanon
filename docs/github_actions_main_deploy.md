@@ -79,17 +79,28 @@ Required for billing (Stripe Checkout / Customer Portal / webhook):
 In other words, it needs permissions covering:
 
 - CloudFormation
-- ECS / ECS Express
+- ECS (including `RunTask`/`DescribeTasks`, used to apply migrations as a one-off task)
+- CodeDeploy and Elastic Load Balancing, for the blue/green cutover
 - ECR
-- IAM
+- IAM, including `PassRole` for the ECS task and execution roles
 - Secrets Manager
-- EC2 describe calls used by ECS networking
+- ACM and Route53, for the HTTPS certificate and its DNS validation
+- CloudWatch Logs
+- EC2 describe and security group calls used by ECS networking
 - RDS describe calls used by dependent stack deployment
 
 Repository-scoped templates are included here:
 
 - trust policy: `scripts/github/aws-github-oidc-trust-policy.json`
 - permissions policy: `scripts/github/aws-github-actions-policy.json`
+
+The deployed role is `storycanon-github-actions`, and its inline policy is named
+`storycanon-deploy`. The permissions template above is a copy of that policy, so
+re-check it against the live role before trusting it to recreate the role:
+
+```bash
+aws iam get-role-policy --role-name storycanon-github-actions --policy-name storycanon-deploy --query PolicyDocument
+```
 
 Replace `<AWS_ACCOUNT_ID>` in the trust policy before use.
 

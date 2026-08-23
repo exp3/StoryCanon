@@ -19,37 +19,107 @@
       "Action": [
         "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
         "ecr:CompleteLayerUpload",
         "ecr:CreateRepository",
         "ecr:DescribeImages",
         "ecr:DescribeRepositories",
+        "ecr:GetDownloadUrlForLayer",
         "ecr:InitiateLayerUpload",
         "ecr:PutImage",
+        "ecr:PutImageScanningConfiguration",
+        "ecr:TagResource",
         "ecr:UploadLayerPart"
       ],
       "Resource": "*"
     },
     {
-      "Sid": "EcsExpress",
+      "Sid": "EcsBlueGreen",
       "Effect": "Allow",
       "Action": [
-        "ecs:CreateExpressGatewayService",
-        "ecs:DeleteExpressGatewayService",
-        "ecs:DescribeExpressGatewayService",
-        "ecs:UpdateExpressGatewayService"
+        "ecs:*",
+        "elasticloadbalancing:*",
+        "codedeploy:*",
+        "application-autoscaling:*"
       ],
       "Resource": "*"
     },
     {
-      "Sid": "IamForEcsExpress",
+      "Sid": "AcmForHttps",
+      "Effect": "Allow",
+      "Action": [
+        "acm:RequestCertificate",
+        "acm:DescribeCertificate",
+        "acm:DeleteCertificate",
+        "acm:ListCertificates",
+        "acm:AddTagsToCertificate",
+        "acm:ListTagsForCertificate",
+        "acm:RemoveTagsFromCertificate"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Route53ForCertValidation",
+      "Effect": "Allow",
+      "Action": [
+        "route53:ChangeResourceRecordSets",
+        "route53:GetChange",
+        "route53:GetHostedZone",
+        "route53:ListHostedZones",
+        "route53:ListHostedZonesByName",
+        "route53:ListResourceRecordSets"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:PutRetentionPolicy",
+        "logs:DeleteRetentionPolicy",
+        "logs:TagResource",
+        "logs:UntagResource",
+        "logs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Ec2NetworkingAndSg",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:CreateTags",
+        "ec2:DeleteTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IamForDeployedRoles",
       "Effect": "Allow",
       "Action": [
         "iam:AttachRolePolicy",
         "iam:CreateRole",
         "iam:CreateServiceLinkedRole",
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:DetachRolePolicy",
         "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
         "iam:PassRole",
-        "iam:PutRolePolicy"
+        "iam:PutRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole"
       ],
       "Resource": "*"
     },
@@ -66,10 +136,9 @@
       "Resource": "*"
     },
     {
-      "Sid": "VpcAndRdsDescribe",
+      "Sid": "RdsDescribe",
       "Effect": "Allow",
       "Action": [
-        "ec2:Describe*",
         "rds:Describe*"
       ],
       "Resource": "*"

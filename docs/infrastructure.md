@@ -80,7 +80,9 @@ Required inputs:
 
 The creation script deploys network, storage, secrets, database, ECR image, IAM roles, and ECS Express Mode. It also sets `PAYMENT_MODE=mock` and writes application secrets.
 
-Prisma migrations are applied automatically on container startup by running `prisma migrate deploy` before `node apps/web/server.js`. Because ECS Express Mode tasks are connected to the VPC, they can reach the private RDS endpoint.
+Prisma migrations are applied by the deploy pipeline, not by the container. `scripts/deploy-bluegreen.sh` registers the task definition revision for the commit image and then runs `prisma migrate deploy` once as a one-off Fargate task on that image, before CodeDeploy shifts any traffic; a non-zero exit stops the deploy. The task runs inside the VPC on the service security group, which is what lets it reach the private RDS endpoint — the GitHub Actions runner cannot, since RDS has no public endpoint and the VPC has no NAT.
+
+Migrations used to run from the container's `CMD`. That re-applied them on every task start, including the green task of a blue/green deploy while blue was still serving the old code against the schema being changed.
 
 RDS PostgreSQL uses major version `16` instead of a fixed minor version. This avoids deployment failures when a specific minor version is unavailable in the target region.
 

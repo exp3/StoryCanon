@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import Stripe from "stripe";
 import { getPlanPriceId, planFromPriceId } from "./stripe";
 
 const ENV_KEYS = [
@@ -78,5 +79,56 @@ describe("planFromPriceId", () => {
     expect(planFromPriceId("")).toBeNull();
     expect(planFromPriceId(undefined)).toBeNull();
     expect(planFromPriceId("price_anything")).toBeNull();
+  });
+});
+
+/**
+ * The webhook route verifies signatures with `constructEventAsync` and no
+ * explicit CryptoProvider, so that the Node build and the `workerd` build each
+ * supply their own. That indirection is invisible at the call site, which is
+ * exactly why it is worth pinning down: if SubtleCrypto ever disagreed with
+ * node:crypto about what a valid Stripe signature looks like, live billing
+ * events would start bouncing with a 400 only after the Cloudflare cutover.
+ */
+describe("webhook signature verification", () => {
+  const secret = "whsec_test_secret";
+  const payload = JSON.stringify({ id: "evt_1", type: "customer.subscription.updated" });
+
+  const providers = [
+    ["node:crypto", Stripe.createNodeCryptoProvider()],
+    ["SubtleCrypto (the Workers path)", Stripe.createSubtleCryptoProvider()],
+  ] as const;
+
+  for (const [name, cryptoProvider] of providers) {
+    it(`accepts a genuine signature under ${name}`, async () => {
+      const stripe = new Stripe("sk_test_unused");
+      const header = await stripe.webhooks.generateTestHeaderStringAsync({ payload, secret });
+
+      const event = await stripe.webhooks.constructEventAsync(payload, header, secret, undefined, cryptoProvider);
+
+      expect(event.type).toBe("customer.subscription.updated");
+    });
+
+    it(`rejects a forged signature under ${name}`, async () => {
+      const stripe = new Stripe("sk_test_unused");
+      const header = await stripe.webhooks.generateTestHeaderStringAsync({ payload, secret: "whsec_wrong_secret" });
+
+      await expect(
+        stripe.webhooks.constructEventAsync(payload, header, secret, undefined, cryptoProvider),
+      ).rejects.toThrow();
+    });
+  }
+
+  // The two cases above pass a provider explicitly; the route deliberately does
+  // not, and leans on `createDefaultCryptoProvider()` to pick one per platform.
+  // That indirection is the actual change here, so it needs its own case.
+  it("verifies through the platform default, which is what the route relies on", async () => {
+    const stripe = new Stripe("sk_test_unused");
+    const header = await stripe.webhooks.generateTestHeaderStringAsync({ payload, secret });
+
+    const event = await stripe.webhooks.constructEventAsync(payload, header, secret);
+
+    expect(event.type).toBe("customer.subscription.updated");
+    await expect(stripe.webhooks.constructEventAsync(payload, "t=1,v1=deadbeef", secret)).rejects.toThrow();
   });
 });

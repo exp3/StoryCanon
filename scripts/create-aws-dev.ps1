@@ -333,6 +333,6 @@ if (-not [string]::IsNullOrWhiteSpace($AppDomainName)) {
 }
 Write-Host "  Database:       $DatabaseEndpoint"
 Write-Host ""
-Write-Host "Prisma migrations are applied automatically during App Runner startup."
+Write-Warning "Prisma migrations are NOT applied automatically. The container CMD no longer runs 'prisma migrate deploy' - only scripts/deploy-bluegreen.sh applies migrations, as a one-off ECS task. This environment starts with whatever schema its database already has."
 Write-Host "Check App Runner logs if the service does not become healthy."
 Write-Warning "After verification, run scripts/delete-aws-dev.ps1 to remove billable resources."

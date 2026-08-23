@@ -9,9 +9,11 @@ set -euo pipefail
 #   2. Ensure the ECR repo exists, then build+push the image BEFORE the service is
 #      created (a CODE_DEPLOY service that cannot pull :latest fails to stabilize).
 #   3. Deploy the compute stack with useExistingEcrRepository=true.
-#   4. First deploy: the service is created by CDK already running :latest, so no
-#      CodeDeploy run is needed. Subsequent deploys register a new task definition
-#      revision for the commit image and drive a CodeDeploy blue/green deployment.
+#   4. Register a task definition revision for the commit image, then apply the
+#      Prisma migrations once as a one-off ECS task running that same image.
+#   5. First deploy: the service is created by CDK already running :latest, so no
+#      CodeDeploy run is needed. Subsequent deploys drive a CodeDeploy blue/green
+#      deployment onto the revision from step 4.
 
 log_step() { printf '\n==> %s\n' "$1"; }
 
@@ -185,8 +187,177 @@ log_step "Deploy compute stack (ALB + blue/green service)"
     --require-approval never
 )
 
+log_step "Register task definition revision for this commit"
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+# Take the task definition CDK manages (env, secrets, roles) and register a new
+# revision that only swaps the container image to the commit-tagged one. This
+# happens before the migration step below so that migrations run on exactly the
+# image that is about to serve traffic.
+aws ecs describe-task-definition \
+  --region "$REGION" \
+  --task-definition "$REPOSITORY_NAME" \
+  --query "taskDefinition" > "$TMP_DIR/current-td.json"
+
+python -c '
+import json, sys
+td = json.load(open(sys.argv[1]))
+image = sys.argv[2]
+container = sys.argv[3]
+matched = False
+for c in td.get("containerDefinitions", []):
+    if c.get("name") == container:
+        c["image"] = image
+        matched = True
+# Without this, renaming the container in compute-stack.ts would quietly register
+# a revision still carrying the previous image - and the migration task below
+# would then apply migrations from the OLD code while reporting success.
+if not matched:
+    sys.exit("Container %r is not in task definition %r." % (container, sys.argv[1]))
+for key in ["taskDefinitionArn", "revision", "status", "requiresAttributes",
+            "compatibilities", "registeredAt", "registeredBy"]:
+    td.pop(key, None)
+json.dump(td, open(sys.argv[4], "w"))
+' "$TMP_DIR/current-td.json" "$IMAGE_URI" "$CONTAINER_NAME" "$TMP_DIR/new-td.json"
+
+NEW_TD_ARN="$(aws ecs register-task-definition \
+  --region "$REGION" \
+  --cli-input-json "file://$TMP_DIR/new-td.json" \
+  --query "taskDefinition.taskDefinitionArn" \
+  --output text)"
+
+echo "Registered task definition: $NEW_TD_ARN"
+
+# Migrations used to run from the container's CMD, which meant every task start
+# re-ran them - including the green task of a blue/green deploy, while blue was
+# still serving the old code against the schema being changed. Applying them
+# once here, before any traffic shifts, makes that ordering explicit.
+#
+# The runner itself cannot reach the database: RDS sits in PRIVATE_ISOLATED
+# subnets with no NAT and no public endpoint. So this runs as a one-off Fargate
+# task inside the VPC on the service's security group - the one the database
+# stack's ingress rule trusts on 5432 - and picks DATABASE_URL up from the task
+# definition's Secrets Manager bindings. The public IP is required because
+# natGateways is 0: pulling from ECR and reading secrets both go via the IGW.
+#
+# Note the asymmetry this creates: the schema moves forward here, but the
+# CodeDeploy group below has autoRollback enabled, and a rollback returns
+# traffic to blue WITHOUT reverting the schema. Migrations therefore have to be
+# expand-only - additive, and readable by the previous revision - or a failed
+# bake turns into an outage instead of a rollback.
+log_step "Apply database migrations"
+
+CLUSTER_NAME="$(stack_output "$COMPUTE_STACK" "ClusterName")"
+SERVICE_SG_ID="$(stack_output "$COMPUTE_STACK" "ServiceSecurityGroupId")"
+PUBLIC_SUBNET_IDS="$(stack_output "${PREFIX}-network" "PublicSubnetIds")"
+
+for value in "$CLUSTER_NAME" "$SERVICE_SG_ID" "$PUBLIC_SUBNET_IDS"; do
+  if [[ -z "$value" || "$value" == "None" ]]; then
+    echo "Could not read the outputs needed to run the migration task." >&2
+    exit 1
+  fi
+done
+
+MIGRATION_OVERRIDES="$(python -c '
+import json, sys
+print(json.dumps({
+    "containerOverrides": [{
+        "name": sys.argv[1],
+        "command": ["sh", "-c", "cd apps/web && ../../node_modules/.bin/prisma migrate deploy"],
+    }],
+}))
+' "$CONTAINER_NAME")"
+
+MIGRATION_TASK_ARN="$(aws ecs run-task \
+  --region "$REGION" \
+  --cluster "$CLUSTER_NAME" \
+  --task-definition "$NEW_TD_ARN" \
+  --launch-type FARGATE \
+  --count 1 \
+  --started-by "migrate-${IMAGE_TAG:0:12}" \
+  --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_IDS],securityGroups=[$SERVICE_SG_ID],assignPublicIp=ENABLED}" \
+  --overrides "$MIGRATION_OVERRIDES" \
+  --query "tasks[0].taskArn" \
+  --output text)"
+
+if [[ -z "$MIGRATION_TASK_ARN" || "$MIGRATION_TASK_ARN" == "None" ]]; then
+  echo "Migration task did not start. Check the ECS RunTask failures on $CLUSTER_NAME." >&2
+  exit 1
+fi
+
+echo "Migration task: $MIGRATION_TASK_ARN"
+
+# Polled explicitly rather than with `aws ecs wait tasks-stopped`, whose waiter
+# is hard-coded to 6s x 100 attempts. Those 600 seconds have to cover
+# provisioning, the image pull and secret resolution before the migration even
+# begins, and exceeding them kills this script under `set -e` while the task
+# keeps running and commits anyway - which would leave production on old code
+# against a migrated schema, with no failed deploy to point at. Raise
+# MIGRATION_TIMEOUT_SECONDS before shipping a migration that rewrites a large
+# table.
+MIGRATION_TIMEOUT_SECONDS="${MIGRATION_TIMEOUT_SECONDS:-1800}"
+MIGRATION_POLL_SECONDS=10
+MIGRATION_WAITED=0
+
+while true; do
+  MIGRATION_STATUS="$(aws ecs describe-tasks \
+    --region "$REGION" \
+    --cluster "$CLUSTER_NAME" \
+    --tasks "$MIGRATION_TASK_ARN" \
+    --query "tasks[0].lastStatus" \
+    --output text)"
+
+  # "None" means ECS no longer knows about the task. Break either way and let
+  # the exit-code gate below decide - it treats a missing code as a failure.
+  if [[ "$MIGRATION_STATUS" == "STOPPED" || "$MIGRATION_STATUS" == "None" ]]; then
+    break
+  fi
+
+  if (( MIGRATION_WAITED >= MIGRATION_TIMEOUT_SECONDS )); then
+    echo "Migration task still ${MIGRATION_STATUS} after ${MIGRATION_TIMEOUT_SECONDS}s." >&2
+    echo "It may yet finish and commit. Inspect $MIGRATION_TASK_ARN before redeploying." >&2
+    echo "No traffic was shifted." >&2
+    exit 1
+  fi
+
+  sleep "$MIGRATION_POLL_SECONDS"
+  MIGRATION_WAITED=$(( MIGRATION_WAITED + MIGRATION_POLL_SECONDS ))
+done
+
+MIGRATION_EXIT_CODE="$(aws ecs describe-tasks \
+  --region "$REGION" \
+  --cluster "$CLUSTER_NAME" \
+  --tasks "$MIGRATION_TASK_ARN" \
+  --query "tasks[0].containers[0].exitCode" \
+  --output text)"
+
+# Shipping new code onto an un-migrated schema is worse than not shipping, so a
+# non-zero exit code - or "None", meaning the container never ran at all - stops
+# the deploy here, before CodeDeploy shifts any traffic.
+if [[ "$MIGRATION_EXIT_CODE" != "0" ]]; then
+  # `|| echo` so a throttled lookup cannot exit the script under `set -e` and
+  # swallow the very message it exists to decorate.
+  MIGRATION_STOPPED_REASON="$(aws ecs describe-tasks \
+    --region "$REGION" \
+    --cluster "$CLUSTER_NAME" \
+    --tasks "$MIGRATION_TASK_ARN" \
+    --query "tasks[0].stoppedReason" \
+    --output text 2>/dev/null || echo "unavailable")"
+  echo "Migrations failed (exit code: $MIGRATION_EXIT_CODE, reason: $MIGRATION_STOPPED_REASON)." >&2
+  echo "Logs are in /ecs/${PREFIX} under the 'web' stream prefix. No traffic was shifted." >&2
+  exit 1
+fi
+
+echo "Migrations applied."
+
 if [[ "$COMPUTE_EXISTS" == "false" ]]; then
   log_step "First deploy: service created by CDK on the pushed image"
+  # On a brand new environment CDK creates the service during the compute stack
+  # deploy above, so it briefly runs against a schema the step above had not
+  # applied yet. It converges as soon as the migrations land, and a first deploy
+  # has no traffic to disturb.
   echo "The freshly created service is already running ${IMAGE_URI}. No CodeDeploy run needed."
 else
   log_step "Blue/green deployment via CodeDeploy"
@@ -197,38 +368,6 @@ else
     echo "Could not read CodeDeploy outputs from $COMPUTE_STACK." >&2
     exit 1
   fi
-
-  TMP_DIR="$(mktemp -d)"
-  trap 'rm -rf "$TMP_DIR"' EXIT
-
-  # Take the task definition CDK manages (env, secrets, roles) and register a new
-  # revision that only swaps the container image to the commit-tagged one.
-  aws ecs describe-task-definition \
-    --region "$REGION" \
-    --task-definition "$REPOSITORY_NAME" \
-    --query "taskDefinition" > "$TMP_DIR/current-td.json"
-
-  python -c '
-import json, sys
-td = json.load(open(sys.argv[1]))
-image = sys.argv[2]
-container = sys.argv[3]
-for c in td.get("containerDefinitions", []):
-    if c.get("name") == container:
-        c["image"] = image
-for key in ["taskDefinitionArn", "revision", "status", "requiresAttributes",
-            "compatibilities", "registeredAt", "registeredBy"]:
-    td.pop(key, None)
-json.dump(td, open(sys.argv[4], "w"))
-' "$TMP_DIR/current-td.json" "$IMAGE_URI" "$CONTAINER_NAME" "$TMP_DIR/new-td.json"
-
-  NEW_TD_ARN="$(aws ecs register-task-definition \
-    --region "$REGION" \
-    --cli-input-json "file://$TMP_DIR/new-td.json" \
-    --query "taskDefinition.taskDefinitionArn" \
-    --output text)"
-
-  echo "Registered task definition: $NEW_TD_ARN"
 
   # AppSpec tells CodeDeploy which task def + container/port to shift traffic onto.
   APPSPEC_CONTENT="$(python -c '
