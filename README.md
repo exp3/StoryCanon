@@ -5,6 +5,7 @@ StoryCanon は、ChatGPT で生成・相談した小説の設定、本文、キ�
 ## 構成
 
 - `apps/web`: Next.js + TypeScript + Prisma + PostgreSQL の Web/API アプリ
+  - Prisma 7 のクライアントは `apps/web/src/generated/prisma` に生成されます（git 管理外）。`npm run dev` / `npm run build` が自動で生成するので通常は意識不要ですが、`tsc` を単体で走らせる場合は先に `npm run prisma:generate -w apps/web` が必要です。
 - `infra`: AWS CDK v2 による App Runner / ECR / RDS / VPC / S3 / Secrets Manager 構成
 - `docs`: 内部仕様、外部仕様、AWS 構築メモ
 - `tests/integration`: ローカル結合テスト
