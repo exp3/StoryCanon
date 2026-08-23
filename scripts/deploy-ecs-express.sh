@@ -223,7 +223,12 @@ done
 
 DB_PASSWORD_JSON="$(aws secretsmanager get-secret-value --region "$REGION" --secret-id "$DATABASE_SECRET_ARN" --query SecretString --output text)"
 DB_PASSWORD="$(python -c 'import json,sys; print(json.loads(sys.stdin.read())["password"])' <<<"$DB_PASSWORD_JSON")"
-DATABASE_URL="postgresql://storycanon:${DB_PASSWORD}@${DATABASE_ENDPOINT}:5432/storycanon?schema=public"
+# `sslmode=no-verify`: RDS sets rds.force_ssl=1, and Prisma 7 connects through
+# node-postgres, which unlike the old Rust engine defaults to no TLS at all.
+# This encrypts without verifying the certificate, which is what the engine
+# effectively did (sslmode=prefer). `require` would mean full verification here
+# and warns that it changes meaning in pg v9, so it is deliberately not used.
+DATABASE_URL="postgresql://storycanon:${DB_PASSWORD}@${DATABASE_ENDPOINT}:5432/storycanon?schema=public&sslmode=no-verify"
 
 log_step "Update application secrets"
 put_secret "DATABASE_URL" "$DATABASE_URL"

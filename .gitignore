@@ -6,3 +6,7 @@ infra/dist/
 .env.local
 apps/web/.env
 apps/web/.env.local
+
+# Prisma 7 generates the client into the source tree instead of node_modules.
+apps/web/src/generated/
+apps/web/tsconfig.tsbuildinfo

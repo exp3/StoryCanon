@@ -1,10 +1,16 @@
 generator client {
-  provider = "prisma-client-js"
+  // v7's Rust-free client. It generates outside node_modules, so `output` is
+  // required and the import path is the generated directory rather than
+  // "@prisma/client". Dropping the Rust query engine is what makes the bundle
+  // small enough to consider Cloudflare Workers.
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
+  // The connection URL lives in prisma.config.ts for the CLI and in
+  // src/lib/prisma.ts for the runtime; v7 no longer accepts `url` here.
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Plan {
