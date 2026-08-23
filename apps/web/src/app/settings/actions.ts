@@ -1,10 +1,9 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
-import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isLocale } from "@/lib/i18n";
+import { generateToken, hashToken, tokenPrefix } from "@/server/oauth";
 import { revokeGrant } from "@/server/oauth-store";
 import { requireSessionUser } from "@/server/session";
 
@@ -20,12 +19,13 @@ export async function createApiToken(_prevState: CreateApiTokenState, formData: 
     return { error: user.locale === "ja" ? "トークン名を入力してください。" : "Please enter a token name.", token: null };
   }
 
-  const raw = randomBytes(24).toString("base64url");
-  const tokenPrefix = raw.slice(0, 12);
-  const tokenHash = await bcrypt.hash(`${raw}:${process.env.APP_API_TOKEN_PEPPER ?? ""}`, 10);
+  // Same generation and hashing as the OAuth tokens: full-entropy random
+  // strings peppered and hashed with SHA-256. Only the raw value returned below
+  // is ever shown to the user; the row keeps the digest.
+  const raw = generateToken();
 
   await prisma.apiToken.create({
-    data: { userId: user.id, name, tokenPrefix, tokenHash },
+    data: { userId: user.id, name, tokenPrefix: tokenPrefix(raw), tokenHash: hashToken(raw) },
   });
 
   revalidatePath("/settings");
