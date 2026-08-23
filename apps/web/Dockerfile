@@ -19,6 +19,13 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
+# Prisma 7 reads the Migrate connection URL from prisma.config.ts, so the
+# deploy pipeline's one-off `prisma migrate deploy` task needs it in the image.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma.config.ts ./apps/web/prisma.config.ts
+# Deliberately the whole tree, devDependencies included: the deploy pipeline's
+# migration task runs the Prisma CLI from this image, and that pulls in prisma,
+# dotenv, and the jiti/c12 pair that loads prisma.config.ts. Adding --omit=dev
+# or `npm prune --production` to shrink the image would break that step.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 USER nextjs
 EXPOSE 3000

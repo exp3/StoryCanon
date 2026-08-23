@@ -110,7 +110,7 @@ $dbPassword = aws secretsmanager get-secret-value `
   --query SecretString `
   --output text | ConvertFrom-Json | Select-Object -ExpandProperty password
 
-$databaseUrl = "postgresql://storycanon:$dbPassword@<DatabaseEndpoint>:5432/storycanon?schema=public"
+$databaseUrl = "postgresql://storycanon:$dbPassword@<DatabaseEndpoint>:5432/storycanon?schema=public&sslmode=no-verify"
 aws secretsmanager put-secret-value `
   --region $region `
   --secret-id "storycanon-$stage/DATABASE_URL" `

@@ -216,7 +216,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $DbPassword = ($DbPasswordJson | ConvertFrom-Json).password
-$DatabaseUrl = "postgresql://storycanon:$DbPassword@${DatabaseEndpoint}:5432/storycanon?schema=public"
+# sslmode=no-verify: RDS sets rds.force_ssl=1, and Prisma 7 connects through
+# node-postgres, which unlike the old Rust engine defaults to no TLS at all.
+$DatabaseUrl = "postgresql://storycanon:$DbPassword@${DatabaseEndpoint}:5432/storycanon?schema=public&sslmode=no-verify"
 
 Invoke-Checked "Update application secrets" {
   Put-AppSecret -Name "DATABASE_URL" -Value $DatabaseUrl
