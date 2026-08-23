@@ -299,6 +299,11 @@ export class ComputeStack extends cdk.Stack {
     new cdk.CfnOutput(this, "AlbDnsName", { value: this.loadBalancer.loadBalancerDnsName });
     new cdk.CfnOutput(this, "ClusterName", { value: cluster.clusterName });
     new cdk.CfnOutput(this, "ServiceName", { value: this.service.serviceName });
+    // The deploy script runs migrations as a one-off task in this SG, since it
+    // is the one the database stack's ingress rule trusts on 5432.
+    new cdk.CfnOutput(this, "ServiceSecurityGroupId", {
+      value: serviceSecurityGroup.securityGroupId,
+    });
     new cdk.CfnOutput(this, "TaskDefinitionArn", { value: taskDefinition.taskDefinitionArn });
     new cdk.CfnOutput(this, "CodeDeployApplicationName", {
       value: deploymentGroup.application.applicationName,

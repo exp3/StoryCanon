@@ -21,3 +21,7 @@ if ($ServiceArn -eq "None" -or -not $ServiceArn) {
 }
 
 aws apprunner start-deployment --region $Region --service-arn $ServiceArn
+
+# Unlike scripts/deploy-bluegreen.sh, this path has no migration step, and the
+# container CMD no longer applies migrations either.
+Write-Warning "Prisma migrations were NOT applied by this script."

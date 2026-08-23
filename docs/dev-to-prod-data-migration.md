@@ -36,7 +36,7 @@ function Get-Out($Stack, $Key) {
 
 ## 1. prod ベーススタックだけ先に作る（prod DB を空で用意）
 
-アプリより先にDBを作り、restore 後にアプリを出す。これで prod 起動時の `prisma migrate deploy` が「適用済み」と判定し衝突しない。
+アプリより先にDBを作り、restore 後にアプリを出す。これでデプロイ時の `prisma migrate deploy` が「適用済み」と判定し衝突しない。
 
 ```powershell
 cd infra
@@ -219,9 +219,9 @@ aws @AwsArgs ec2 terminate-instances --instance-ids $ProdInst
 
 ## 5. prod アプリをデプロイ
 
-データ投入済みなので、ここでアプリサービスを出す。CI（`main` マージ / `workflow_dispatch`）で `deploy-ecs-express.sh` を実行。`STORYCANON_STAGE=prod` を設定しておくこと。ベーススタックは手順1で作成済みなので更新扱いになる。
+データ投入済みなので、ここでアプリサービスを出す。CI（`main` マージ / `workflow_dispatch`）で `deploy-bluegreen.sh` を実行。`STORYCANON_STAGE=prod` を設定しておくこと。ベーススタックは手順1で作成済みなので更新扱いになる。
 
-起動後、`prisma migrate deploy` は適用済みと判定して何もしない。
+デプロイ中の migration ステップ（`scripts/deploy-bluegreen.sh` の one-off ECS タスク）で `prisma migrate deploy` が走るが、restore 済みなので適用済みと判定して何もしない。起動時には実行されない。
 
 ---
 

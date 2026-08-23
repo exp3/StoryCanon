@@ -72,7 +72,7 @@ ECS Express Mode URL を使う場合、スクリプト完了後に表示され�
 - 作成スクリプトは AWS リソースを作るため課金が発生する。
 - 検証後は `scripts/delete-aws-dev.ps1` で速やかに削除する。
 - RDS は private subnet にあるため、手元 PC から Prisma migration を直接実行しない。
-- ECS Express Mode の container 起動時に `prisma migrate deploy` を実行し、その後 `node apps/web/server.js` を起動する。
+- container 起動時にマイグレーションは実行されない（CMD は `node apps/web/server.js` のみ）。適用するのは `scripts/deploy-bluegreen.sh` だけで、traffic shift 前に one-off ECS タスクとして1回実行する。ECS Express / App Runner 経路にはマイグレーション手順が無いので、スキーマ変更を伴う場合は別途適用すること。
 - migration 失敗時は ECS/CloudWatch logs を確認する。
 
 ## 決済モック仕様
@@ -201,7 +201,7 @@ Stripe checkout / webhook は今回実装しない。
   - `GOOGLE_CLIENT_SECRET`
   - `APP_API_TOKEN_PEPPER`
 - [x] AWS 作成スクリプトを追加する。
-- [x] RDS migration 手順を確定する。ECS Express Mode の container 起動時に `prisma migrate deploy` を実行する。
+- [x] RDS migration 手順を確定する。`scripts/deploy-bluegreen.sh` が traffic shift 前に one-off ECS タスクとして `prisma migrate deploy` を実行する（旧: container 起動時に実行）。
 - [ ] AWS smoke test 手順を docs に追加する。
 - [ ] GitHub Actions または同等の CI で build / test を実行する。
 
