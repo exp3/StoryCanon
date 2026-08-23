@@ -1,0 +1,19 @@
+{
+  "name": "@storycanon/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "types": "./dist/node/client.d.ts",
+  "main": "./dist/node/client.js",
+  "exports": {
+    ".": {
+      "workerd": "./dist/workers/client.js",
+      "types": "./dist/node/client.d.ts",
+      "default": "./dist/node/client.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.workers.json && node copy-assets.mjs"
+  }
+}

@@ -2,6 +2,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY apps/web/package.json apps/web/package.json
+COPY packages/db/package.json packages/db/package.json
 RUN npm install --workspaces --include-workspace-root
 
 FROM node:22-alpine AS builder
@@ -18,6 +19,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# The Prisma client now lives in a workspace package that webpack treats as
+# external, so node_modules/@storycanon/db is a symlink that only resolves if
+# the package itself is in the image.
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db ./packages/db
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
 # Prisma 7 reads the Migrate connection URL from prisma.config.ts, so the
 # deploy pipeline's one-off `prisma migrate deploy` task needs it in the image.
