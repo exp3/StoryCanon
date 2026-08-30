@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["@storycanon/db"],
+
+  // @storycanon/db is external, so webpack never looks inside it and Next's
+  // output tracing never sees what it imports. The workers client pulls in
+  // @prisma/client's edge runtime, which therefore never reaches the standalone
+  // output — and OpenNext's esbuild pass, resolving from inside .open-next,
+  // cannot find it. It goes unnoticed on Windows, where `next build` fails to
+  // create the standalone symlink at all (EPERM) and resolution falls back to
+  // the repository's own node_modules, which has everything.
+  outputFileTracingIncludes: {
+    "**/*": ["../../node_modules/@prisma/client/runtime/**"],
+  },
   webpack: (config) => {
     // @storycanon/db is a workspace package, so node_modules holds a symlink to
     // packages/db. Resolving through it would turn the package into ordinary
