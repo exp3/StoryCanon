@@ -72,6 +72,28 @@ jobs:
           test -f packages/db/dist/workers/client.js
           test -f packages/db/dist/workers/internal/query_compiler_fast_bg.wasm
 
+      # Next writes a symlink for the workspace package into the standalone
+      # output, and it does not survive being copied into .open-next — esbuild
+      # reports "Could not resolve @storycanon/db" with no further detail.
+      # Windows never sees this because `next build` cannot create that symlink
+      # at all (EPERM) and resolution falls back to the repository's own
+      # node_modules.
+      #
+      # Replacing the link with a real directory fixes that but moves the
+      # package inside .open-next, where esbuild can no longer walk up to the
+      # repository's node_modules for what it imports. So the copy carries its
+      # own: the generated client needs exactly these two, and nothing else.
+      - name: Materialise the workspace package
+        run: |
+          set -euo pipefail
+          test -L node_modules/@storycanon/db
+          rm node_modules/@storycanon/db
+          cp -r packages/db node_modules/@storycanon/db
+          mkdir -p node_modules/@storycanon/db/node_modules/@prisma
+          cp -r node_modules/@prisma/client node_modules/@storycanon/db/node_modules/@prisma/client
+          cp -r node_modules/@prisma/client-runtime-utils node_modules/@storycanon/db/node_modules/@prisma/client-runtime-utils
+          test -f node_modules/@storycanon/db/node_modules/@prisma/client/runtime/wasm-compiler-edge.mjs
+
       # `deploy:worker` builds through scripts/build-worker.mjs, which moves the
       # dotenv files aside first. A runner has none, so it is a no-op here — the
       # script exists for local deploys, where `next build` would otherwise bake
