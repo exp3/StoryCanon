@@ -8,3 +8,15 @@ infra/dist
 apps/web/.env
 apps/web/.env.local
 .git
+
+# Generated and build output. Without these, `COPY . .` carries a developer's
+# stale artifacts into the builder — tsc does not clean its outDir, so anything
+# the current schema no longer generates would survive into the image — and
+# uploads hundreds of MB of Worker build output to the daemon on every build.
+packages/db/src
+packages/db/dist
+apps/web/.open-next
+apps/web/.wrangler
+apps/web/.dev.vars
+# An interrupted Worker build leaves the real dotenv files under these names.
+*.build-stash

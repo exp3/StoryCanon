@@ -1,10 +1,29 @@
+// Two clients, because Node and workerd need different ones and the app has to
+// keep deploying to both while the migration is in flight. `@storycanon/db`
+// picks between them with a conditional export, so no call site knows.
+//
+// Both are generated into packages/db and compiled from there: Prisma 7 emits
+// TypeScript only, so the client cannot be consumed as a package without a tsc
+// step. `prisma generate` runs every block, so the AWS build asks for this one
+// by name (`--generator client`) to stay independent of the Cloudflare output.
+
 generator client {
-  // v7's Rust-free client. It generates outside node_modules, so `output` is
-  // required and the import path is the generated directory rather than
-  // "@prisma/client". Dropping the Rust query engine is what makes the bundle
-  // small enough to consider Cloudflare Workers.
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../../../packages/db/src/node"
+  moduleFormat = "esm"
+  // tsc emits import specifiers verbatim, and extensionless relative imports
+  // are not resolvable ESM.
+  importFileExtension = "js"
+}
+
+generator clientWorkers {
+  provider = "prisma-client"
+  output   = "../../../packages/db/src/workers"
+  moduleFormat = "esm"
+  importFileExtension = "js"
+  // Without this the client compiles its query-compiler wasm from bytes at
+  // request time, which workerd refuses outright.
+  runtime = "cloudflare"
 }
 
 datasource db {

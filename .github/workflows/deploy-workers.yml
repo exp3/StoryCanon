@@ -1,0 +1,90 @@
+name: deploy-workers
+
+# Replaces deploy-main.yml, which deployed to AWS and is disabled. That file is
+# kept until the Fargate stack is decommissioned so the rollback path still has
+# a way to ship, and should be deleted along with it.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-workers
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Runs the Node client's generator and tsc, which is what the app is type
+      # checked against. The Worker build regenerates both variants itself.
+      - name: Run unit tests
+        run: npm run test -w apps/web
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      # Schema first, then the code that depends on it — migrations have to stay
+      # expand-only, because a Worker deploy is instant and has no bake period in
+      # which to catch a mismatch.
+      #
+      # Supabase's direct endpoint is IPv6-only; this connection string uses the
+      # session pooler so a GitHub runner can reach it. The Worker itself goes
+      # through Hyperdrive to the direct endpoint.
+      - name: Apply database migrations
+        working-directory: apps/web
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      # `deploy:worker` builds through scripts/build-worker.mjs, which moves the
+      # dotenv files aside first. A runner has none, so it is a no-op here — the
+      # script exists for local deploys, where `next build` would otherwise bake
+      # a developer's localhost config and dev NEXTAUTH_SECRET into the bundle.
+      - name: Build and deploy the Worker
+        working-directory: apps/web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy:worker
+
+      # The deploy replaces the Worker's vars wholesale from wrangler.jsonc, so
+      # a file that lost PAYMENT_MODE would silently put production into mock
+      # checkout. Fail the job rather than leave that to be noticed in revenue.
+      - name: Verify the deployment
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://storycanon.softglow.jp/api/health || true)
+            [ "$code" = "200" ] && break
+            sleep 5
+          done
+          test "$code" = "200" || { echo "health check failed: $code"; exit 1; }
+
+          # /api/health never touches the database, so it cannot tell whether
+          # Postgres is reachable. This path queries before it can answer 401.
+          db=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer verify-deployment-not-a-real-token" \
+            https://storycanon.softglow.jp/api/mcp/list-private-projects || true)
+          test "$db" = "401" || { echo "database path returned $db, expected 401"; exit 1; }
+
+          echo "health 200, database reachable"

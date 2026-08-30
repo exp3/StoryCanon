@@ -7,6 +7,7 @@
     "test:integration": "node --test tests/integration/*.test.mjs"
   },
   "workspaces": [
+    "packages/db",
     "apps/web",
     "infra"
   ],

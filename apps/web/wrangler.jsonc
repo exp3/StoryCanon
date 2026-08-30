@@ -1,0 +1,68 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "storycanon",
+  "compatibility_date": "2025-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // The custom domain is the only way in. workers.dev and per-version preview
+  // URLs would otherwise serve the whole app, against production data and live
+  // Stripe, from a second origin — which `serverOrigin` would also happily mint
+  // as an OAuth issuer.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // The runbook's only error-detection step on cutover day is reading these.
+  // Wrangler's config wins on deploy, so leaving this out can switch off logs
+  // that were enabled in the dashboard.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  // Non-secret configuration. Secrets go through `wrangler secret put`.
+  //
+  // PAYMENT_MODE is committed as "live" rather than flipped by hand at cutover.
+  // `wrangler deploy` replaces the whole vars set from this file, so a later
+  // deploy from a clean checkout would have silently reverted production to
+  // mock checkout — no error, no alarm, and revenue stops. Exposure is handled
+  // by closing workers.dev above instead.
+  //
+  // NEXTAUTH_URL is pinned: unset, `serverOrigin` trusts the Host header and
+  // MCP discovery advertises whatever host was asked for.
+  //
+  // APP_ENV, EXPORT_BUCKET_NAME and DATABASE_HOST/PORT are not carried over —
+  // nothing in src/ reads them.
+  "vars": {
+    "PAYMENT_MODE": "live",
+    "NEXTAUTH_URL": "https://storycanon.softglow.jp",
+    "ADMIN_EMAILS": "n.kimura@softglow.jp",
+    "GA_MEASUREMENT_ID": "G-09PPHB8FTC",
+    "POSTHOG_KEY": "phc_sVWafRSwJnmkamLduGFxyET6BwCjbVoWsMmaJdk6snAo",
+    "POSTHOG_HOST": "https://us.i.posthog.com",
+    "STRIPE_PRICE_PLUS_MONTHLY": "price_1TzapSJO9YFdZhm1Iwnfrdc8",
+    "STRIPE_PRICE_PLUS_YEARLY": "price_1TsIrEJO9YFdZhm1lwiBofOU",
+    "STRIPE_PRICE_PRO_MONTHLY": "price_1Tzap1JO9YFdZhm1pvXq5lOk",
+    "STRIPE_PRICE_PRO_YEARLY": "price_1TsItuJO9YFdZhm1XQesr4dT"
+  },
+
+  // Workers cannot hold a connection pool across requests, so pooling lives
+  // here instead of in the client. `localConnectionString` is only used by
+  // `wrangler dev`; deployed Workers always go through the configured id.
+  //
+  // Query caching is DISABLED on this config (set on the Hyperdrive side, not
+  // here). It defaults to on with a 60s max_age and is not invalidated by
+  // writes, which this app cannot tolerate: NextAuth uses database sessions, so
+  // every request re-reads the user, and a write followed by a read of the same
+  // row is the normal case. It first showed up as onboarding looping — the
+  // completion flag was written, then read back stale, so the app kept deciding
+  // onboarding was unfinished. Re-enable only with a second, cache-disabled
+  // binding for the reads that need to be fresh.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "b1add919bdaa46eaa3be4ec541824615",
+      "localConnectionString": "postgresql://storycanon:storycanon@localhost:5432/storycanon"
+    }
+  ]
+}
