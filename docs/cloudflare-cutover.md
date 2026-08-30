@@ -16,7 +16,11 @@ AWS（ALB + ECS Fargate + RDS）から Cloudflare Workers + Supabase へ本番�
 | Supabase が **Pro プラン** | 無料枠には自動バックアップが無い。現行 RDS は7日保持なので、Free のままだとデータ保護が後退する |
 | Worker のシークレット6件が投入済み | `npx wrangler secret list`（`apps/web` で実行） |
 | Hyperdrive のクエリキャッシュが無効 | `npx wrangler hyperdrive get b1add919bdaa46eaa3be4ec541824615` が `"caching": {"disabled": true}` |
-| 移行タスク定義 | `storycanon-prod-dbtools:4` 以降が存在 |
+| 移行タスク定義 | `storycanon-prod-dbtools` の最新リビジョンの `PGHOST` が Supabase を指している |
+| `APP_API_TOKEN_PEPPER` が ECS と同一 | 値が違うと既存の API トークンと MCP 連携が**全て 401 になる**。`?? ""` で握り潰されるため例外は出ない |
+| `NEXTAUTH_SECRET` が ECS と同一 | database セッションなので既存ログインは切れないが、**新規サインインだけが失敗する**という分かりにくい壊れ方をする |
+| ACM 検証用 CNAME が生きている | `nslookup -type=CNAME _9d604df18a2d2b3e27d492e2b3358b97.storycanon.softglow.jp` — 切り戻し先の ALB の HTTPS が証明書更新に依存している |
+| **デプロイ CI を止める** | `main` への push で `cdk deploy` が走ると `desiredCount` が 1 に戻り、DNS 切替後の ALB が RDS に書き始める。ワークフローを無効化するか `main` をロックする |
 
 Stripe の Webhook URL はドメインが変わらないため **変更不要**。
 Google OAuth のリダイレクト URI も本番用が既に登録済みのため **変更不要**。
@@ -30,17 +34,21 @@ Google OAuth のリダイレクト URI も本番用が既に登録済みのた�
 サブネット        subnet-07d6bc7d0d4f6aff2,subnet-028ee8602ea756d56
 セキュリティG     sg-02258949a02c69492
 Hyperdrive ID     b1add919bdaa46eaa3be4ec541824615
-Worker            storycanon（https://storycanon.beautiful-life.workers.dev）
+Worker            storycanon（workers.dev は無効。Custom Domain が唯一の入口）
 ```
 
 ---
 
 ## 1. 事前準備（ダウンタイム前・利用者に影響なし）
 
-### 1-1. Worker を本番設定でビルドしてデプロイ
+### 1-1. Worker をビルドしてデプロイ
 
-`apps/web/wrangler.jsonc` の `PAYMENT_MODE` を `"live"` に変更する。
-検証中は `"mock"` にしてあり、これが課金開始のキルスイッチになっている。
+`wrangler.jsonc` は既に本番設定になっている（`PAYMENT_MODE: "live"`、`workers_dev: false`、
+`NEXTAUTH_URL` は本番ドメイン）。**当日に設定ファイルを編集する必要はない。**
+
+以前は手で `"live"` に変えて deploy する手順だったが、`wrangler deploy` は vars を
+ファイルの内容で丸ごと置き換えるため、後日クリーンなチェックアウトから deploy した瞬間に
+`mock` へ戻り、課金が静かに止まる作りだった。
 
 ```bash
 npm run deploy:worker -w apps/web
@@ -101,7 +109,10 @@ aws logs get-log-events --region ap-northeast-1 \
   --query "events[].message" --output text
 ```
 
-**全テーブルが `OK` であることを確認する。** ひとつでも `MISMATCH` なら先に進まず、7章へ。
+**全テーブルが `OK` であることを確認する。** `MISMATCH` か `QUERY_FAILED` があればタスクは異常終了する
+（`exit != 0`）ので、目視より終了コードを信じてよい。テーブル一覧はソース DB から導出しているため、
+後から増えたテーブルが検証から漏れることはない。`DROP SCHEMA` の直前に `PGHOST` が Supabase かを確認しており、
+違えば実行前に停止する。
 
 移行タスクは Supabase の **Session pooler（IPv4）** を使う。直接接続は IPv6 のみで、
 この VPC には IPv6 が無いため到達できない。Worker 側は Hyperdrive 経由で直接接続を使っており、こちらは IPv6 で繋がる。
@@ -119,7 +130,10 @@ Cloudflare ダッシュボードで作業する。
 Custom Domain を追加すると Cloudflare が DNS レコードと証明書を自動で用意する。
 既存の CNAME が残っていると競合するため、削除が先。
 
-証明書の発行に数分かかることがある。
+**この1件だけはプロキシ有効（オレンジクラウド）になる。** 他のレコードは DNS only のままで正しい。
+
+証明書の発行に数分かかることがある。**10分たっても発行されなければ7章で切り戻す。**
+待ち続けるほど Stripe の Webhook が Supabase に溜まり、切り戻しが難しくなる。
 
 ---
 
@@ -135,13 +149,23 @@ curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer invalid-token
 3つ目は **401 であること**。500 なら DB に到達できていない。
 `/api/health` は DB を触らないため、200 でも接続の証明にはならない。
 
+**切り替え前に発行済みの API トークンで 200 が返ることも確認する。**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}
+" -H "Authorization: Bearer <切替前に発行したトークン>"   https://storycanon.softglow.jp/api/mcp/list-private-projects
+```
+
+これは `APP_API_TOKEN_PEPPER` が一致しているかを確かめる唯一の手段。上の無効トークンの 401 は、
+**ペッパーが違う場合に有効なトークンが返すのと同じ応答**なので区別できない。新規発行も同様に、
+どんなペッパー値でも自己完結して成功してしまう。
+
 ブラウザで以下を確認する。
 
-- Google ログイン
+- Google ログイン（**新規サインイン**。既存セッションは `NEXTAUTH_SECRET` が違っても生き残る）
 - 既存プロジェクトが一覧に出る（**データ移行が効いている証拠**）
 - シーンの編集と保存
 - 設定画面でプランが正しく表示される
-- MCP トークンの発行
 
 `api.softglow.jp` も巻き込み事故が無いか確認する。
 
@@ -155,6 +179,9 @@ curl -s -o /dev/null -w "%{http_code}\n" https://api.softglow.jp/
 
 - Stripe ダッシュボードで Webhook が届いているか確認（URL 変更なし）
 - Cloudflare の Workers ログでエラーが出ていないか確認
+- Google Cloud Console から検証用リダイレクト URI
+  `https://storycanon.beautiful-life.workers.dev/api/auth/callback/google` を**削除**
+- デプロイ CI の停止を解除する
 - **RDS と ECS サービスはこの日は消さない**。1〜2週間並走観察してから撤去する
 
 ---
@@ -175,8 +202,17 @@ DNS を戻して ECS を起こすだけで元に戻る。RDS は読み取りし�
    ```
 
 **切り戻しが無傷なのは、切り替え後に Supabase へ書き込まれた分を捨てられる間だけ。**
+
 利用者が新しいデータを作り始めたら、戻すには Supabase から RDS への逆移行が必要になる。
-異常に気づいたら早く判断すること。
+それだけでなく、**Stripe の Webhook は利用者の操作と無関係に届く**。DNS が切り替わった瞬間から、
+更新・失敗・解約が Supabase に書かれ、Stripe には 2xx を返すので**再送されない**。
+切り戻すとその顧客のプランは RDS 側の古い状態のままになる — 解約済みが有効のまま、あるいは
+支払い済みが期限切れのまま。
+
+切り戻す前に **Stripe ダッシュボードの Developers > Webhooks の配信ログ**を見て、
+切替後に配信されたイベントが無いか確認すること。あれば手動で再送が必要になる。
+
+DNS の TTL とキャッシュがあるため、切り戻しても数分は Cloudflare 側へ流れ続ける。異常に気づいたら早く判断すること。
 
 ---
 
@@ -192,4 +228,5 @@ DNS を戻して ECS を起こすだけで元に戻る。RDS は読み取りし�
 | `Network unreachable` | Supabase の直接接続は IPv6 のみ、VPC に IPv6 が無い | 移行タスクだけ Session pooler（IPv4）を使う |
 | シークレット取得の失敗 | 手動作成したシークレットは CDK が作った実行ロールの許可対象外 | 別建てのインラインポリシーで付与（次回デプロイで巻き戻らない） |
 | オンボーディングのループ | Hyperdrive のクエリキャッシュが既定で有効。60秒、書き込みで無効化されない | `--caching-disabled`。認証と課金判定にも同じ影響があった |
-| OAuth のコールバックが localhost | `next build` がローカルの `.env` を焼き込む。Docker 経路は `.dockerignore` のおかげで無事だった | `scripts/build-worker.mjs` が `.env` を退避してビルドする |
+| OAuth のコールバックが localhost | `next build` がローカルの `.env` を焼き込む。Docker 経路は `.dockerignore` のおかげで無事だった | `scripts/build-worker.mjs` が dotenv 一式を退避してビルドする |
+| Route Handler で毎回クライアントが増える | React の `cache()` はキャッシュディスパッチャが無いと素通しになり、Next の Route Handler ランタイムはそれを用意しない | 実行コンテキストを鍵にした `WeakMap` で1リクエスト1クライアントにし、`waitUntil` で切断する |

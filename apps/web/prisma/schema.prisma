@@ -2,8 +2,10 @@
 // keep deploying to both while the migration is in flight. `@storycanon/db`
 // picks between them with a conditional export, so no call site knows.
 //
-// Both are generated into packages/db and compiled from there; see that
-// package's README for why the client cannot simply be imported from source.
+// Both are generated into packages/db and compiled from there: Prisma 7 emits
+// TypeScript only, so the client cannot be consumed as a package without a tsc
+// step. `prisma generate` runs every block, so the AWS build asks for this one
+// by name (`--generator client`) to stay independent of the Cloudflare output.
 
 generator client {
   provider = "prisma-client"

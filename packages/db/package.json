@@ -7,13 +7,20 @@
   "main": "./dist/node/client.js",
   "exports": {
     ".": {
-      "workerd": "./dist/workers/client.js",
       "types": "./dist/node/client.d.ts",
+      "workerd": "./dist/workers/client.js",
       "default": "./dist/node/client.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.workers.json && node copy-assets.mjs"
+    "build:node": "tsc -p tsconfig.node.json",
+    "build:workers": "tsc -p tsconfig.workers.json && node copy-assets.mjs",
+    "build": "npm run build:node && npm run build:workers"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
   }
 }

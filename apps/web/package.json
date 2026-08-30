@@ -2,23 +2,26 @@
   "name": "@storycanon/web",
   "private": true,
   "scripts": {
-    "predev": "prisma generate && npm --prefix ../../packages/db run build",
+    "predev": "npm run db:node",
     "dev": "next dev",
-    "build": "prisma generate && npm --prefix ../../packages/db run build && next build",
+    "build": "npm run db:node && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "prisma:generate": "prisma generate && npm --prefix ../../packages/db run build",
+    "prisma:generate": "npm run db:node",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "pretest": "prisma generate && npm --prefix ../../packages/db run build",
-    "prelint": "prisma generate && npm --prefix ../../packages/db run build",
+    "pretest": "npm run db:node",
+    "prelint": "npm run db:node",
     "build:worker": "node scripts/build-worker.mjs",
-    "deploy:worker": "node scripts/build-worker.mjs && wrangler deploy"
+    "deploy:worker": "node scripts/build-worker.mjs && wrangler deploy",
+    "db:node": "prisma generate --generator client && npm --prefix ../../packages/db run build:node",
+    "db:all": "prisma generate && npm --prefix ../../packages/db run build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
     "@modelcontextprotocol/server": "^2.0.0",
+    "@opennextjs/cloudflare": "^1.20.2",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@storycanon/db": "*",
@@ -34,7 +37,6 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",

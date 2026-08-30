@@ -21,8 +21,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 # The Prisma client now lives in a workspace package that webpack treats as
 # external, so node_modules/@storycanon/db is a symlink that only resolves if
-# the package itself is in the image.
-COPY --from=builder --chown=nextjs:nodejs /app/packages/db ./packages/db
+# the package itself is in the image. Only the Node build is copied: the
+# generated sources and the workers client (including a 3.7MB wasm this
+# runtime can never load) are ~12MB that would never be executed here.
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/package.json ./packages/db/package.json
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/dist/node ./packages/db/dist/node
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
 # Prisma 7 reads the Migrate connection URL from prisma.config.ts, so the
 # deploy pipeline's one-off `prisma migrate deploy` task needs it in the image.

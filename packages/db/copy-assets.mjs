@@ -1,4 +1,5 @@
-import { cp, readdir } from "node:fs/promises";
+import { cp, readdir, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,9 +25,23 @@ async function* wasmFiles(dir) {
   }
 }
 
+if (!existsSync(src)) {
+  console.error(`${src} does not exist - run \`prisma generate\` before building the package.`);
+  process.exit(1);
+}
+
+// tsc does not clean its outDir, so a wasm renamed across a Prisma upgrade
+// would otherwise ship alongside its replacement. Only the wasm files go: the
+// same directory holds the client tsc just emitted.
+if (existsSync(out)) {
+  for await (const stale of wasmFiles(out)) {
+    await rm(stale);
+  }
+}
+
 let copied = 0;
 for await (const file of wasmFiles(src)) {
-  await cp(file, join(out, relative(src, file)));
+  await cp(file, join(out, relative(src, file)), { recursive: true });
   copied += 1;
 }
 

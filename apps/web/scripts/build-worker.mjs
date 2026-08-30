@@ -4,53 +4,73 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Builds the Cloudflare Worker with `.env` out of the way.
+ * Builds the Cloudflare Worker with every dotenv file out of the way.
  *
- * `next build` loads `.env`, and whatever it finds there ends up in the bundle.
- * On the Fargate path that is harmless because the Docker build never sees the
- * file — `.dockerignore` excludes it. The Worker is built on a developer
- * machine, where the file very much exists, and it holds local values:
- * NEXTAUTH_URL pointing at localhost, empty Google credentials, and a
- * NEXTAUTH_SECRET of "local-dev-secret-change-me". Those silently outrank the
- * secrets set with `wrangler secret put`.
+ * `next build` loads them, and whatever it finds ends up in the bundle. On the
+ * Fargate path that is harmless because the Docker build never sees them —
+ * `.dockerignore` excludes them. The Worker is built on a developer machine,
+ * where they very much exist and hold local values: NEXTAUTH_URL pointing at
+ * localhost, empty Google credentials, and a NEXTAUTH_SECRET of
+ * "local-dev-secret-change-me". Those silently outrank the secrets set with
+ * `wrangler secret put`.
  *
  * It first showed up as a broken OAuth callback URL, which is the loud symptom.
  * The quiet one is the session signing key: a deploy that leaked it would sign
- * production sessions with a string that is committed to the repository.
+ * production sessions with a string committed to this repository.
  *
- * Doing this by hand is not good enough — forgetting once is all it takes — so
- * the move is part of the build and the file is put back no matter how the
- * build ends.
+ * All of Next's production lookups are covered, not just `.env` — `.env.local`
+ * and `.env.production` both outrank it, and `.env.local` is a perfectly
+ * ordinary file for a developer to have.
  */
 const appDir = join(dirname(fileURLToPath(import.meta.url)), "..");
-const envPath = join(appDir, ".env");
-const stashPath = join(appDir, ".env.build-stash");
+
+/** Everything `next build` reads in production mode, plus the dev pair. */
+const ENV_FILES = [
+  ".env",
+  ".env.local",
+  ".env.production",
+  ".env.production.local",
+  ".env.development",
+  ".env.development.local",
+];
+
+const SUFFIX = ".build-stash";
 
 function restore() {
-  if (existsSync(stashPath) && !existsSync(envPath)) {
-    renameSync(stashPath, envPath);
+  for (const name of ENV_FILES) {
+    const original = join(appDir, name);
+    const stash = `${original}${SUFFIX}`;
+    if (existsSync(stash) && !existsSync(original)) {
+      renameSync(stash, original);
+    }
   }
 }
 
-// A previous run that was killed mid-build leaves the stash behind. Put it back
-// before doing anything else; refuse to guess if both files somehow exist.
-if (existsSync(stashPath)) {
-  if (existsSync(envPath)) {
+// A run that was killed mid-build leaves stashes behind. Put them back before
+// doing anything else; refuse to guess if both copies of a file exist.
+for (const name of ENV_FILES) {
+  const original = join(appDir, name);
+  const stash = `${original}${SUFFIX}`;
+  if (existsSync(stash) && existsSync(original)) {
     console.error(
-      `Both ${envPath} and ${stashPath} exist. A previous build left the stash behind ` +
-        `and a new .env has since been created. Merge them by hand and delete the stash.`,
+      `Both ${name} and ${name}${SUFFIX} exist. A previous build left the stash behind and a ` +
+        `new ${name} has since been created. Merge them by hand and delete the stash.`,
     );
     process.exit(1);
   }
-  console.warn("Recovered .env from a previous interrupted build.");
+}
+if (ENV_FILES.some((name) => existsSync(join(appDir, `${name}${SUFFIX}`)))) {
+  console.warn("Recovered dotenv files from a previous interrupted build.");
   restore();
 }
 
-const stashed = existsSync(envPath);
-if (stashed) renameSync(envPath, stashPath);
+for (const name of ENV_FILES) {
+  const original = join(appDir, name);
+  if (existsSync(original)) renameSync(original, `${original}${SUFFIX}`);
+}
 
 // Cover the ways this process can end, including Ctrl-C, so the developer is
-// never left without their .env.
+// never left without their dotenv files.
 process.on("exit", restore);
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
   process.on(signal, () => {
@@ -59,11 +79,21 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
   });
 }
 
-const result = spawnSync("npx", ["opennextjs-cloudflare", "build"], {
-  cwd: appDir,
-  stdio: "inherit",
-  shell: process.platform === "win32",
-});
+const run = (args) =>
+  spawnSync("npm", args, { cwd: appDir, stdio: "inherit", shell: process.platform === "win32" });
+
+// Both clients, unlike the Node-only build the AWS path runs: the Worker bundle
+// needs dist/workers at runtime and dist/node for its types.
+let result = run(["run", "db:all"]);
+if (result.status === 0 && !result.error) {
+  result = spawnSync("npx", ["opennextjs-cloudflare", "build"], {
+    cwd: appDir,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+}
 
 restore();
+
+if (result.error) console.error(result.error);
 process.exit(result.status ?? 1);
