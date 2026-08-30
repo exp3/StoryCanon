@@ -1,4 +1,3 @@
-import { cache } from "react";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@storycanon/db";

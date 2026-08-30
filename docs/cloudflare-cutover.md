@@ -153,7 +153,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer invalid-token
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}
-" -H "Authorization: Bearer <切替前に発行したトークン>"   https://storycanon.softglow.jp/api/mcp/list-private-projects
+"   -H "Authorization: Bearer <切替前に発行したトークン>"   https://storycanon.softglow.jp/api/mcp/list-private-projects
 ```
 
 これは `APP_API_TOKEN_PEPPER` が一致しているかを確かめる唯一の手段。上の無効トークンの 401 は、
