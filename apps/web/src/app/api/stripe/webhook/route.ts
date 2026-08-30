@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getStripe, planFromPriceId } from "@/lib/stripe";
+import { getStripe, planFromPriceId, stripeCryptoProvider } from "@/lib/stripe";
 
 const STATUS_MAP: Record<Stripe.Subscription.Status, "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED" | "INCOMPLETE"> = {
   active: "ACTIVE",
@@ -66,14 +66,19 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    // The async form on purpose, and with no explicit CryptoProvider: stripe's
-    // package exports resolve to the Node build on Node and the Web build under
-    // `workerd`, and each supplies its own default provider (node:crypto vs
-    // SubtleCrypto). The synchronous `constructEvent` has no SubtleCrypto path
-    // at all, so it would throw once this runs on Cloudflare Workers. Passing a
-    // provider explicitly would pin us to one runtime; letting the platform
-    // choose keeps this one line correct on both.
-    event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecret);
+    // The async form because the synchronous `constructEvent` has no SubtleCrypto
+    // path at all. The provider is named rather than left to stripe's platform
+    // detection: that detection reads the `workerd` condition in stripe's
+    // package exports, which OpenNext's bundler does not apply, so the Node
+    // build is what runs on the Worker. `stripeCryptoProvider()` returns
+    // undefined on Node, leaving the previous behaviour untouched there.
+    event = await stripe.webhooks.constructEventAsync(
+      rawBody,
+      signature,
+      webhookSecret,
+      undefined,
+      stripeCryptoProvider(),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "invalid_signature";
     return NextResponse.json({ error: "invalid_signature", message }, { status: 400 });

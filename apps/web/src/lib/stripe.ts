@@ -1,14 +1,37 @@
 import Stripe from "stripe";
 
+/** workerd identifies itself here; there is no `process` to sniff. */
+const isWorkers =
+  typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
+
 let client: Stripe | null = null;
 
+/**
+ * The HTTP client and crypto provider are named explicitly on Workers rather
+ * than left to stripe's own platform detection.
+ *
+ * That detection relies on the `workerd` condition in stripe's package exports,
+ * and OpenNext's bundler does not apply it — the Node build is what ends up in
+ * the Worker, so the SDK reaches for `node:http` and every call fails with
+ * "An error occurred with our connection to Stripe". Checkout and the billing
+ * portal both 500 on it.
+ *
+ * The crypto provider is pinned for the same reason: once the platform picked
+ * the wrong build for transport, it cannot be trusted to pick the right one for
+ * webhook signature verification either. SubtleCrypto is what workerd has.
+ */
 export function getStripe() {
   if (!client) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("STRIPE_SECRET_KEY is not set.");
-    client = new Stripe(key);
+    client = new Stripe(key, isWorkers ? { httpClient: Stripe.createFetchHttpClient() } : {});
   }
   return client;
+}
+
+/** `undefined` on Node, which leaves stripe to use node:crypto as before. */
+export function stripeCryptoProvider() {
+  return isWorkers ? Stripe.createSubtleCryptoProvider() : undefined;
 }
 
 export const BILLING_INTERVALS = ["monthly", "yearly"] as const;
