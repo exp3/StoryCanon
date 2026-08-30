@@ -56,25 +56,21 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         run: npx prisma migrate deploy
 
-      # Both client variants, before the package is copied below. The test step
-      # above only builds the Node one (via its pretest hook), and esbuild
-      # resolves the `workerd` condition, so a copy taken at that point is
-      # missing exactly the file the Worker build needs.
+      # Both client variants. The test step above only builds the Node one (via
+      # its pretest hook), and esbuild resolves the `workerd` condition, so
+      # without this the Worker build cannot find dist/workers/client.js — which
+      # was the real cause of the first CI failure.
       - name: Build both database clients
         run: npm run db:all -w apps/web
 
-      # npm links workspaces as symlinks. Replacing the link with a real
-      # directory keeps the resolution independent of how symlinks survive being
-      # copied into .open-next, which differs between platforms — on Windows
-      # `next build` cannot create the standalone link at all (EPERM).
-      - name: Materialise the workspace package
+      # Assert the files esbuild will look for exist, rather than discovering
+      # they are missing several minutes later from inside a bundler.
+      - name: Check both clients were built
         run: |
           set -euo pipefail
-          test -L node_modules/@storycanon/db
           test -f packages/db/dist/node/client.js
           test -f packages/db/dist/workers/client.js
-          rm node_modules/@storycanon/db
-          cp -r packages/db node_modules/@storycanon/db
+          test -f packages/db/dist/workers/internal/query_compiler_fast_bg.wasm
 
       # `deploy:worker` builds through scripts/build-worker.mjs, which moves the
       # dotenv files aside first. A runner has none, so it is a no-op here — the
