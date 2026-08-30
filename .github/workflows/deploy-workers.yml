@@ -56,17 +56,23 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         run: npx prisma migrate deploy
 
-      # npm links workspaces as symlinks, and OpenNext's esbuild pass cannot
-      # resolve @storycanon/db through the one Next copies into the standalone
-      # output — it fails with "Could not resolve". Windows never hits this
-      # because `next build` cannot create that symlink at all (EPERM) and the
-      # resolver falls back to the root node_modules, which is why the local
-      # build works and CI did not. Replacing the link with a real directory
-      # removes symlink semantics from the question entirely.
+      # Both client variants, before the package is copied below. The test step
+      # above only builds the Node one (via its pretest hook), and esbuild
+      # resolves the `workerd` condition, so a copy taken at that point is
+      # missing exactly the file the Worker build needs.
+      - name: Build both database clients
+        run: npm run db:all -w apps/web
+
+      # npm links workspaces as symlinks. Replacing the link with a real
+      # directory keeps the resolution independent of how symlinks survive being
+      # copied into .open-next, which differs between platforms — on Windows
+      # `next build` cannot create the standalone link at all (EPERM).
       - name: Materialise the workspace package
         run: |
           set -euo pipefail
           test -L node_modules/@storycanon/db
+          test -f packages/db/dist/node/client.js
+          test -f packages/db/dist/workers/client.js
           rm node_modules/@storycanon/db
           cp -r packages/db node_modules/@storycanon/db
 
