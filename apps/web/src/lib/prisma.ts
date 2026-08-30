@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@storycanon/db";
 
@@ -27,8 +28,21 @@ import { PrismaClient } from "@storycanon/db";
 const isWorkers =
   typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 
+/**
+ * On Workers the connection string comes from the Hyperdrive binding, not the
+ * environment: it points at Cloudflare's pool rather than straight at Postgres,
+ * and it is minted per request. `getCloudflareContext` only reads a global that
+ * the Worker entrypoint sets, so importing it on Node is harmless as long as it
+ * is never called there. The fallback covers `wrangler dev` runs started
+ * without a binding.
+ */
+function resolveConnectionString() {
+  if (!isWorkers) return process.env.DATABASE_URL;
+  return getCloudflareContext().env.HYPERDRIVE?.connectionString ?? process.env.DATABASE_URL;
+}
+
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = resolveConnectionString();
 
   // Pooling belongs to whoever can actually hold sockets open. On Node that is
   // this process; on Workers it is Hyperdrive, and a pool here would only ever

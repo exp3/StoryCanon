@@ -7,5 +7,45 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  // Non-secret configuration. Secrets go through `wrangler secret put`.
+  //
+  // PAYMENT_MODE is deliberately "mock" while this Worker is only reachable at
+  // its workers.dev URL: it is the kill switch that stops the app from starting
+  // charges, and a test URL that can open live Stripe checkouts is an accident
+  // waiting to happen. Set it to "live" as part of the cutover, not before.
+  //
+  // APP_ENV, EXPORT_BUCKET_NAME and DATABASE_HOST/PORT are not carried over —
+  // nothing in src/ reads them.
+  "vars": {
+    "PAYMENT_MODE": "mock",
+    "ADMIN_EMAILS": "n.kimura@softglow.jp",
+    "GA_MEASUREMENT_ID": "G-09PPHB8FTC",
+    "POSTHOG_KEY": "phc_sVWafRSwJnmkamLduGFxyET6BwCjbVoWsMmaJdk6snAo",
+    "POSTHOG_HOST": "https://us.i.posthog.com",
+    "STRIPE_PRICE_PLUS_MONTHLY": "price_1TzapSJO9YFdZhm1Iwnfrdc8",
+    "STRIPE_PRICE_PLUS_YEARLY": "price_1TsIrEJO9YFdZhm1lwiBofOU",
+    "STRIPE_PRICE_PRO_MONTHLY": "price_1Tzap1JO9YFdZhm1pvXq5lOk",
+    "STRIPE_PRICE_PRO_YEARLY": "price_1TsItuJO9YFdZhm1XQesr4dT"
+  },
+
+  // Workers cannot hold a connection pool across requests, so pooling lives
+  // here instead of in the client. `localConnectionString` is only used by
+  // `wrangler dev`; deployed Workers always go through the configured id.
+  //
+  // Query caching is DISABLED on this config (set on the Hyperdrive side, not
+  // here). It defaults to on with a 60s max_age and is not invalidated by
+  // writes, which this app cannot tolerate: NextAuth uses database sessions, so
+  // every request re-reads the user, and a write followed by a read of the same
+  // row is the normal case. It first showed up as onboarding looping — the
+  // completion flag was written, then read back stale, so the app kept deciding
+  // onboarding was unfinished. Re-enable only with a second, cache-disabled
+  // binding for the reads that need to be fresh.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "b1add919bdaa46eaa3be4ec541824615",
+      "localConnectionString": "postgresql://storycanon:storycanon@localhost:5432/storycanon"
+    }
+  ]
 }

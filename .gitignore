@@ -13,3 +13,4 @@ packages/db/dist/
 apps/web/.open-next/
 apps/web/.wrangler/
 apps/web/.dev.vars
+apps/web/.env.build-stash
