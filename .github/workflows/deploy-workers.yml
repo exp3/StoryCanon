@@ -1,8 +1,8 @@
 name: deploy-workers
 
-# Replaces deploy-main.yml, which deployed to AWS and is disabled. That file is
-# kept until the Fargate stack is decommissioned so the rollback path still has
-# a way to ship, and should be deleted along with it.
+# The only deploy pipeline. It replaced deploy-main.yml, which shipped to AWS;
+# that workflow and the CDK app it drove were removed once Fargate was
+# decommissioned.
 
 on:
   push:

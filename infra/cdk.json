@@ -1,6 +1,0 @@
-{
-  "app": "node dist/bin/storycanon.js",
-  "context": {
-    "region": "ap-northeast-1"
-  }
-}
