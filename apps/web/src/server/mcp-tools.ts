@@ -1,5 +1,5 @@
 import { fromJsonSchema, type JsonSchemaType } from "@modelcontextprotocol/server";
-import { AjvJsonSchemaValidator } from "@modelcontextprotocol/server/validators/ajv";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/server/validators/cf-worker";
 
 /**
  * MCP tool definitions.
@@ -16,7 +16,23 @@ import { AjvJsonSchemaValidator } from "@modelcontextprotocol/server/validators/
  * *enforces* anything at runtime.
  */
 
-const validator = new AjvJsonSchemaValidator();
+/**
+ * The interpreting validator, not the Ajv one, on every runtime.
+ *
+ * Ajv compiles each schema by generating source and handing it to `new
+ * Function`, which workerd refuses outright — so in production every tool
+ * registration threw and `/mcp` answered 500 to an authenticated client. It
+ * survived review because `next dev` runs on Node, where Ajv is fine, and
+ * because the requests that are cheap to make by hand stop at 401 or 403
+ * before any tool is registered.
+ *
+ * Kept unconditional rather than chosen per runtime: one validator everywhere
+ * means local development exercises the engine production runs. It carries no
+ * extra dependency — the SDK bundles `@cfworker/json-schema` — and these
+ * schemas are validated once per call, so interpreting them costs nothing
+ * that matters here.
+ */
+const validator = new CfWorkerJsonSchemaValidator();
 
 const projectId = { type: "string", description: "対象作品の ID / The project id." } as const;
 const importance = { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] } as const;
