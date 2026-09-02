@@ -4,8 +4,8 @@ import { MCP_TOOLS, describeFailure, toToolResult, toolInputSchema } from "./mcp
 /**
  * The MCP tool definitions are the contract every client reads, and the
  * response shaping decides whether a model sees a fixable error or a dead
- * end. Neither is covered by anything else — there are no tests for the HTTP
- * layer at all.
+ * end. Neither is covered by anything else: of the HTTP layer, only the origin
+ * allowlist is tested, in mcp-origin.test.ts.
  */
 
 describe("tool definitions", () => {

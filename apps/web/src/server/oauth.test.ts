@@ -180,6 +180,10 @@ describe("issuer derivation", () => {
     expect(await origin("evil.example", "https://storycanon.example", "https")).toBe("https://storycanon.example");
   });
 
+  it("falls back to configuration when there is no Host header to read", async () => {
+    expect(await origin(null, "https://storycanon.example")).toBe("https://storycanon.example");
+  });
+
   it("takes only the first value of a comma-joined forwarded proto", async () => {
     expect(await origin("storycanon.example", "https://storycanon.example", "https, http")).toBe("https://storycanon.example");
   });

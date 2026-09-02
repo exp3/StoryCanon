@@ -1,6 +1,7 @@
-import { createMcpHandler, originValidationResponse } from "@modelcontextprotocol/server";
+import { createMcpHandler, validateOriginHeader } from "@modelcontextprotocol/server";
 import type { CurrentActor } from "@/server/http";
 import { REQUIRED_SCOPE, authenticateMcp, isAuthFailure, type McpAuthFailure } from "@/server/mcp-auth";
+import { allowedMcpOriginHostnames } from "@/server/mcp-origin";
 import { createStoryCanonMcpServer } from "@/server/mcp-server";
 import { mcpResourceUrl, serverOrigin } from "@/server/oauth-http";
 
@@ -9,11 +10,12 @@ import { mcpResourceUrl, serverOrigin } from "@/server/oauth-http";
  *
  * Deliberately stateless: the 2026-07-28 revision dropped protocol sessions
  * and the standalone GET/SSE stream, so every exchange is a self-contained
- * POST answered with JSON. That matters here — the app runs as a single
- * Fargate task behind an ALB whose idle timeout is the AWS default of 60
- * seconds, which a long-lived SSE stream would trip. `createMcpHandler` also
- * serves 2025-era clients through its stateless fallback, from the same tool
- * definitions, so the two protocol eras cannot drift apart.
+ * POST answered with JSON. That suits where this runs — a Cloudflare Worker,
+ * which bills for a request held open and cannot keep one alive across a
+ * deploy, so a long-lived SSE stream would be the wrong shape regardless.
+ * `createMcpHandler` also serves 2025-era clients through its stateless
+ * fallback, from the same tool definitions, so the two protocol eras cannot
+ * drift apart.
  *
  * The existing ChatGPT Actions surface (`/api/mcp/*`, described by
  * `/mcp-openapi.json`) is untouched and keeps working alongside this.
@@ -34,10 +36,26 @@ const handler = createMcpHandler((ctx) => {
   return createStoryCanonMcpServer(actor);
 });
 
-/** Own origin plus the localhost forms used in development. */
-function allowedOriginHostnames(req: Request) {
-  const { hostname } = new URL(req.url);
-  return [hostname, "localhost", "127.0.0.1", "[::1]"];
+/**
+ * Reject cross-origin browser traffic, as the transport spec requires.
+ *
+ * `validateOriginHeader` is called instead of the SDK's `originValidationResponse`
+ * only because the latter discards why the check failed, and a rejection here
+ * is otherwise invisible: it looks like a network error at the client, which is
+ * what made a bad allowlist take a production reproduction to diagnose.
+ */
+function rejectedOrigin(req: Request) {
+  const result = validateOriginHeader(req.headers.get("origin"), allowedMcpOriginHostnames(req));
+  if (result.ok) return undefined;
+
+  // Rejections only. The hostname comes back parsed by the SDK, so it is safe
+  // to log; the raw header is not, since an unparseable one is arbitrary text.
+  console.warn(`MCP origin rejected (${result.errorCode}): ${result.hostname ?? "unparseable"}`);
+
+  return Response.json(
+    { jsonrpc: "2.0", error: { code: -32000, message: result.message }, id: null },
+    { status: 403 },
+  );
 }
 
 /**
@@ -69,9 +87,7 @@ function methodNotAllowed() {
 }
 
 export async function POST(req: Request) {
-  // Required by the transport spec: reject cross-origin browser traffic so a
-  // web page cannot drive this endpoint through DNS rebinding.
-  const rejected = originValidationResponse(req, allowedOriginHostnames(req));
+  const rejected = rejectedOrigin(req);
   if (rejected) return rejected;
 
   const auth = await authenticateMcp(req.headers.get("authorization"), mcpResourceUrl(serverOrigin(req)));
