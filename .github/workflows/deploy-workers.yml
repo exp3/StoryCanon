@@ -129,7 +129,22 @@ jobs:
           # allowlist missing a connector's domain returns 403 here. That is
           # invisible from the outside — it reaches the client as a failed
           # connection — so it went unnoticed once already (issue #43).
-          mcp=$(curl -s -o /dev/null -w "%{http_code}" -X POST             -H "Origin: https://claude.ai"             -H "Content-Type: application/json"             -H "Accept: application/json, text/event-stream"             -H "Authorization: Bearer verify-deployment-not-a-real-token"             -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'             https://storycanon.softglow.jp/mcp || true)
+          #
+          # This is the only check above that tells the new version from the
+          # old one: health and the database path answer the same either way.
+          # So it is also the only one that has to outwait propagation, and it
+          # retries for that reason rather than for flakiness.
+          for i in $(seq 1 10); do
+            mcp=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              -H "Origin: https://claude.ai" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json, text/event-stream" \
+              -H "Authorization: Bearer verify-deployment-not-a-real-token" \
+              -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+              https://storycanon.softglow.jp/mcp || true)
+            [ "$mcp" = "401" ] && break
+            sleep 5
+          done
           test "$mcp" = "401" || { echo "MCP origin check returned $mcp, expected 401"; exit 1; }
 
           echo "health 200, database reachable, MCP origin accepted"
