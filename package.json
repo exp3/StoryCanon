@@ -2,14 +2,13 @@
   "name": "storycanon",
   "private": true,
   "scripts": {
-    "build": "npm run build -w apps/web && npm run build -w infra",
+    "build": "npm run build -w apps/web",
     "test": "node --test tests/integration/*.test.mjs",
     "test:integration": "node --test tests/integration/*.test.mjs"
   },
   "workspaces": [
     "packages/db",
-    "apps/web",
-    "infra"
+    "apps/web"
   ],
   "engines": {
     "node": ">=20.0.0"

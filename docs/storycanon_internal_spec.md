@@ -275,6 +275,11 @@ storycanon-prod-app
 
 ## 6. AWSインフラ詳細
 
+> **この章は実装前に書いた当初の設計で、現在の構成ではない。**
+> 本番は 2026-08-30 に Cloudflare Workers + Supabase PostgreSQL（東京）へ移行済みで、
+> AWS の資源は撤去されている。現在の構成は [README](../README.md)、移行の経緯は
+> [docs/cloudflare-cutover.md](cloudflare-cutover.md) を参照。
+
 ### 6.1 App Runner
 
 用途：Next.js Web / API / MCP風API を1つのDockerコンテナで動かす。
@@ -385,6 +390,11 @@ MVPでは `app` のみでもよい。
 ---
 
 ## 7. CI/CD
+
+> **この章は実装前に書いた当初の設計で、現在の構成ではない。**
+> 本番は 2026-08-30 に Cloudflare Workers + Supabase PostgreSQL（東京）へ移行済みで、
+> AWS の資源は撤去されている。現在の構成は [README](../README.md)、移行の経緯は
+> [docs/cloudflare-cutover.md](cloudflare-cutover.md) を参照。
 
 ### 7.1 GitHub Actions
 
