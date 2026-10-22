@@ -86,10 +86,7 @@ const run = (args) =>
 // needs dist/workers at runtime and dist/node for its types.
 let result = run(["run", "db:all"]);
 if (result.status === 0 && !result.error) {
-  // Next 15 left the support window on 2026-10-21, and OpenNext refuses to
-  // build it after that date — which would also block shipping its security
-  // patches (15.5.x still receives them). Remove once on Next 16.
-  result = spawnSync("npx", ["opennextjs-cloudflare", "build", "--dangerouslyUseUnsupportedNextVersion"], {
+  result = spawnSync("npx", ["opennextjs-cloudflare", "build"], {
     cwd: appDir,
     stdio: "inherit",
     shell: process.platform === "win32",
