@@ -10,6 +10,10 @@ import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, LOCALE_HEADER } from "@/lib/local
  *
  * Runs on the Edge runtime: do not import the i18n dictionary or Prisma here.
  *
+ * Next 16 deprecates this file in favour of `proxy.ts`, but `proxy` only runs
+ * on the Node.js runtime, which OpenNext's Cloudflare adapter supports only as
+ * an unmaintained experiment. Keep the Edge `middleware` until that changes.
+ *
  * On caching: `/` renders differently per Accept-Language and per locale
  * cookie, so it must never be served from a shared cache. Next owns the `Vary`
  * header on App Router responses and overwrites anything set here, but it also
